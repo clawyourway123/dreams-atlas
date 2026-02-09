@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Avery Dennison Chemical Space Atlas</title>
-    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.35.0.min.js"></script>
     <style>
         body { margin: 0; background: #0f1115; color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; }
         .sidebar { position: absolute; left: 0; top: 0; width: 300px; height: 100vh; background: rgba(20, 22, 28, 0.95); border-right: 1px solid #333; padding: 20px; z-index: 10; backdrop-filter: blur(10px); }
@@ -79,8 +79,9 @@
             zaxis: {title: '', showgrid: true, gridcolor: '#333', zerolinecolor: '#333', showticklabels: false, showbackground: false},
             bgcolor: 'rgba(0,0,0,0)', // Transparent scene bg
             aspectmode: 'cube',
-            dragmode: 'turntable'
-        }
+            dragmode: 'orbit'
+        },
+        uirevision: 'atlas-1'
     };
 
     // Global cache of points for similarity search
@@ -115,44 +116,35 @@
                 atlasData = json; // cache for similarity
                 populateSpectrumDropdown(json);
 
-                let x = json.map(d => d.x);
-                let y = json.map(d => d.y);
-                let z = json.map(d => d.z);
-                let colors = json.map(d => d.cluster);
+                // Use full dataset for rendering, but keep styling light
+                const x = json.map(d => d.x);
+                const y = json.map(d => d.y);
+                const z = json.map(d => d.z);
+                const colors = json.map(d => d.cluster);
+                const ids = json.map(d => d.id);
 
-                // Calculate bounds to make simulation look realistic relative to real data
-                const minX = Math.min(...x), maxX = Math.max(...x);
-                const minY = Math.min(...y), maxY = Math.max(...y);
-                const minZ = Math.min(...z), maxZ = Math.max(...z);
-                const rangeX = maxX - minX || 10;
-                const rangeY = maxY - minY || 10;
-                const rangeZ = maxZ - minZ || 10;
+                // Cache base styles globally so we can highlight via color/size only
+                window.baseColors = colors.slice();
+                window.baseSizes = new Array(json.length).fill(2);
+                window.baseIds = ids.slice();
 
-                // If we requested more points than exist in the file, generate simulated extras
-                // NO SIMULATION - 100% REAL DATA ONLY
-                
-                let ids = json.map(d => d.id); // Define ids before usage
-
-                // Initialize with TWO traces: Base (all) and Highlight (empty)
                 const baseTrace = {
                     x: x, y: y, z: z,
                     mode: 'markers',
                     text: ids,
                     hoverinfo: 'text',
-                    marker: { size: 3, color: colors, colorscale: 'Viridis', opacity: 0.8 },
+                    marker: { size: window.baseSizes, color: window.baseColors, colorscale: 'Viridis', opacity: 0.6 },
                     type: 'scatter3d',
                     name: 'All spectra'
                 };
                 
-                const highlightTrace = {
-                    x: [], y: [], z: [],
-                    mode: 'markers',
-                    type: 'scatter3d',
-                    name: 'Similar',
-                    marker: { size: 6, color: '#ff4b5c', opacity: 1.0, line: {color: '#fff', width: 1} }
-                };
+                Plotly.newPlot('scatter3d', [baseTrace], layout);
 
-                Plotly.react('scatter3d', [baseTrace, highlightTrace], layout);
+                // Build a quick lookup from ids -> full atlas index
+                const idToFullIndex = new Map();
+                json.forEach((d, idx) => {
+                    idToFullIndex.set(d.id, idx);
+                });
 
                 // WIRE CLICK EVENT
                 document.getElementById('scatter3d').on('plotly_click', function(data){
@@ -162,7 +154,11 @@
                     
                     if (curveNum !== 0) return; // Only base layer clicks
 
-                    const selectedId = atlasData[pointIndex].id;
+                    // Map from rendered point to full atlas id
+                    const selectedId = ids[pointIndex];
+                    const fullIdx = idToFullIndex.get(selectedId);
+                    if (fullIdx == null) return;
+
                     console.log("Clicked:", selectedId);
                     
                     const select = document.getElementById('specSelect');
@@ -227,29 +223,23 @@
         });
         distances.sort((a, b) => a.dist - b.dist);
 
-        const k = 50; 
+        const k = 12; 
         const neighbourIdx = distances.slice(0, k).map(d => d.idx);
 
-        const neighX = [];
-        const neighY = [];
-        const neighZ = [];
-        const neighText = [];
+        // Start from base styles and just tweak the similar ones
+        const newColors = window.baseColors ? window.baseColors.slice() : atlasData.map(d => d.cluster);
+        const newSizes = window.baseSizes ? window.baseSizes.slice() : new Array(atlasData.length).fill(2);
+
         neighbourIdx.forEach(i => {
-            neighX.push(atlasData[i].x);
-            neighY.push(atlasData[i].y);
-            neighZ.push(atlasData[i].z);
-            neighText.push(atlasData[i].id);
+            newColors[i] = '#ff4b5c';
+            newSizes[i] = 6;
         });
 
-        // USE RESTYLE (Does not reset camera/layout)
-        // Update Trace 1 (the highlight trace)
+        // Update marker color/size in-place on the single trace (no extra WebGL trace)
         Plotly.restyle('scatter3d', {
-            x: [neighX],
-            y: [neighY],
-            z: [neighZ],
-            text: [neighText],
-            name: `Similar to ${anchorId}`
-        }, [1]); // Target trace index 1
+            'marker.color': [newColors],
+            'marker.size': [newSizes]
+        }, [0]);
     }
 </script>
 

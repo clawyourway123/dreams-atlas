@@ -4,32 +4,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Arkema Chemical Space Atlas</title>
+    <title>DuPont Chemical Space Atlas</title>
     <script src="https://cdn.plot.ly/plotly-2.35.0.min.js"></script>
     <style>
         body { margin: 0; background: #0f1115; color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; }
         .sidebar { position: absolute; left: 0; top: 0; width: 300px; height: 100vh; background: rgba(20, 22, 28, 0.95); border-right: 1px solid #333; padding: 20px; z-index: 10; backdrop-filter: blur(10px); }
         .main-view { margin-left: 300px; height: 100vh; width: calc(100vw - 300px); }
         
-        h1 { font-size: 20px; font-weight: 600; color: #00b5e2; margin-bottom: 30px; letter-spacing: 1px; text-transform: uppercase; }
+        h1 { font-size: 20px; font-weight: 600; color: #e1000f; margin-bottom: 30px; letter-spacing: 1px; text-transform: uppercase; }
         h2 { font-size: 14px; color: #888; text-transform: uppercase; margin-top: 20px; }
         
         .stat-card { background: #1a1d24; border: 1px solid #333; border-radius: 8px; padding: 15px; margin-bottom: 10px; }
         .stat-val { font-size: 24px; font-weight: 700; color: #fff; }
         .stat-label { font-size: 12px; color: #aaa; }
 
-        .btn { width: 100%; padding: 12px; background: #00b5e2; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.2s; margin-top: 20px; }
+        .btn { width: 100%; padding: 12px; background: #e1000f; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.2s; margin-top: 20px; }
         .btn:hover { background: #ff1a2b; box-shadow: 0 0 15px rgba(225, 0, 15, 0.4); }
 
         /* Loader */
-        .loader { border: 3px solid #333; border-top: 3px solid #00b5e2; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: none; margin: 10px auto; }
+        .loader { border: 3px solid #333; border-top: 3px solid #e1000f; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: none; margin: 10px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
 <div class="sidebar">
-    <h1>Arkema / Atlas</h1>
+    <h1>DuPont / Atlas</h1>
     
     <div class="stat-card">
         <div class="stat-val">24,593</div>
