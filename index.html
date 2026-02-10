@@ -4,23 +4,170 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Henkel Atlas - Adhesive Intelligence</title>
+    <title>Dreams Lab - Molecular Intelligence</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <style>
-        body { margin: 0; font-family: 'Helvetica Neue', sans-serif; background: #000; color: #fff; text-align: center; }
-        .hero { height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%); }
-        h1 { font-size: 4rem; font-weight: 700; margin-bottom: 10px; background: linear-gradient(to right, #fff, #aaa); -webkit-background-clip: text; color: transparent; }
-        p { font-size: 1.5rem; color: #888; max-width: 600px; line-height: 1.5; }
-        .cta { margin-top: 40px; padding: 15px 40px; font-size: 1.2rem; background: #e1000f; color: white; border: none; border-radius: 50px; cursor: pointer; text-decoration: none; transition: 0.3s; }
-        .cta:hover { background: #ff1a2b; transform: scale(1.05); }
-        .mockup { margin-top: 50px; width: 80%; max-width: 900px; border-radius: 10px; box-shadow: 0 0 50px rgba(225, 0, 15, 0.2); border: 1px solid #333; }
+        :root {
+            --accent: #e1000f;
+            --accent-hover: #ff1a2b;
+            --glass: rgba(255, 255, 255, 0.03);
+            --border: rgba(255, 255, 255, 0.1);
+            --text-main: #fff;
+            --text-dim: #aaa;
+        }
+        body { margin: 0; font-family: 'Inter', sans-serif; background: #000; color: var(--text-main); text-align: center; scroll-behavior: smooth; }
+        .container { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
+        
+        /* Hero */
+        .hero { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%); padding: 100px 0; }
+        h1 { font-size: 4.5rem; font-weight: 800; margin-bottom: 20px; background: linear-gradient(to right, #fff, #888); -webkit-background-clip: text; color: transparent; letter-spacing: -2px; }
+        .hero p { font-size: 1.5rem; color: var(--text-dim); max-width: 700px; line-height: 1.5; margin-bottom: 50px; }
+        .cta { padding: 18px 45px; font-size: 1.1rem; font-weight: 600; background: var(--accent); color: white; border: none; border-radius: 50px; cursor: pointer; text-decoration: none; transition: 0.3s; box-shadow: 0 10px 20px rgba(225, 0, 15, 0.2); }
+        .cta:hover { background: var(--accent-hover); transform: translateY(-2px); box-shadow: 0 15px 25px rgba(225, 0, 15, 0.3); }
+        
+        /* Enterprise Pilot Section */
+        .pilot-section { padding: 120px 0; background: #000; border-top: 1px solid var(--border); }
+        .section-label { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--accent); text-transform: uppercase; letter-spacing: 3px; margin-bottom: 30px; display: block; }
+        .pilot-card { 
+            display: flex; 
+            background: var(--glass); 
+            border: 1px solid var(--border); 
+            border-radius: 24px; 
+            overflow: hidden; 
+            text-align: left;
+            transition: 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .pilot-card:hover { border-color: rgba(255, 255, 255, 0.2); transform: translateY(-5px); }
+        .pilot-content { flex: 1.2; padding: 60px; }
+        .pilot-content h2 { font-size: 32px; font-weight: 700; margin-bottom: 20px; margin-top: 0; }
+        .pilot-content p { font-size: 18px; color: var(--text-dim); line-height: 1.6; margin-bottom: 40px; }
+        .cta-text { color: #fff; text-decoration: none; font-weight: 600; border-bottom: 2px solid var(--accent); padding-bottom: 5px; transition: 0.2s; font-size: 16px; }
+        .cta-text:hover { color: var(--accent); }
+        .pilot-visual { flex: 1; background: radial-gradient(circle at center, #222 0%, #050505 100%); display: flex; align-items: center; justify-content: center; position: relative; border-left: 1px solid var(--border); }
+        .pilot-visual::after { content: "PILOT PREVIEW"; font-family: 'JetBrains Mono'; font-size: 10px; color: #444; letter-spacing: 2px; }
+
+        @media (max-width: 900px) {
+            .pilot-card { flex-direction: column; }
+            .pilot-content { padding: 40px; }
+            .pilot-visual { height: 300px; border-left: none; border-top: 1px solid var(--border); }
+            h1 { font-size: 3.5rem; }
+        }
+
+        /* Bento Grid */
+        .benefits-section { padding: 120px 0; background: #000; }
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(2, auto);
+            gap: 24px;
+            margin-top: 60px;
+        }
+        .bento-item {
+            background: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 40px;
+            text-align: left;
+            transition: 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .bento-item:hover {
+            border-color: rgba(225, 0, 15, 0.3);
+            background: rgba(225, 0, 15, 0.02);
+            transform: translateY(-5px);
+        }
+        .bento-item h3 { font-size: 20px; font-weight: 700; margin-bottom: 12px; margin-top: 0; }
+        .bento-item p { font-size: 15px; color: var(--text-dim); line-height: 1.6; margin: 0; }
+        .bento-icon {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: var(--accent);
+            margin-bottom: 24px;
+            display: block;
+        }
+        .bento-wide { grid-column: span 2; }
+        .bento-tall { grid-row: span 2; }
+
+        @media (max-width: 1000px) {
+            .bento-grid { grid-template-columns: repeat(2, 1fr); }
+            .bento-wide { grid-column: span 1; }
+        }
+        @media (max-width: 600px) {
+            .bento-grid { grid-template-columns: 1fr; }
+            .bento-wide, .bento-tall { grid-column: span 1; grid-row: span 1; }
+        }
     </style>
 </head>
 <body>
     <div class="hero">
-        <h1>The Adhesive Atlas</h1>
-        <p>Map your entire chemical library in 3D space. Predict properties. Reformulate in seconds.</p>
-        <a href="henkel_demo.html" class="cta">Launch Interactive Demo</a>
-        <img src="https://via.placeholder.com/900x500/111/333?text=3D+Chemical+Space+Map" class="mockup" alt="Dashboard Preview">
+        <div class="container">
+            <h1>Dreams Lab</h1>
+            <p>Molecular intelligence for the next generation of materials. Map chemical space, predict properties, and discover white space with DreaMS.</p>
+            <a href="#benefits" class="cta">Explore Capabilities</a>
+        </div>
     </div>
+
+    <!-- Benefits Section -->
+    <section id="benefits" class="benefits-section">
+        <div class="container">
+            <span class="section-label">Capabilities</span>
+            <div class="bento-grid">
+                <div class="bento-item bento-wide">
+                    <span class="bento-icon">[ Foundation Model ]</span>
+                    <h3>The Language of Chemistry</h3>
+                    <p>DreaMS is a self-supervised transformer trained on 201 million mass spectra—the largest chemical dataset in existence. It doesn't just match patterns; it understands the universal syntax of molecules.</p>
+                </div>
+                <div class="bento-item">
+                    <span class="bento-icon">[ Zero-Shot ID ]</span>
+                    <h3>Instant Unknowns</h3>
+                    <p>Identify novel compounds in seconds without reference standards. DreaMS maps your data to a global 3D atlas to resolve chemical "dark matter."</p>
+                </div>
+                <div class="bento-item">
+                    <span class="bento-icon">[ Peer Reviewed ]</span>
+                    <h3>Nature Validation</h3>
+                    <p>Our foundation model architecture was validated in <i>Nature Biotechnology</i> (May 2025), establishing a new benchmark for molecular intelligence.</p>
+                </div>
+                <div class="bento-item">
+                    <span class="bento-icon">[ Interactive ]</span>
+                    <h3>3D Chemical Atlas</h3>
+                    <p>Navigate tens of thousands of proprietary molecules in a high-performance 3D environment. Spot clusters, trends, and outliers instantly.</p>
+                </div>
+                <div class="bento-item">
+                    <span class="bento-icon">[ Strategic ]</span>
+                    <h3>White Space Discovery</h3>
+                    <p>Infiltrate competitor datasets and overlay them on your own to identify untapped chemical territories and protect your IP.</p>
+                </div>
+                <div class="bento-item bento-wide">
+                    <span class="bento-icon">[ R&D Efficiency ]</span>
+                    <h3>Digital Lab Acceleration</h3>
+                    <p>Transform your existing LC-MS fleet into an intelligent discovery engine. Cut reformulation cycles from months to days by navigating your proprietary formulation space in 3D.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Enterprise Pilot Section -->
+    <section class="pilot-section">
+        <div class="container">
+            <span class="section-label">Enterprise Pilots</span>
+            <div class="pilot-card">
+                <div class="pilot-content">
+                    <h2>Henkel Adhesive Atlas</h2>
+                    <p>A specialized application of DreaMS intelligence mapping thousands of proprietary adhesive formulations into 3D space to accelerate reformulation and performance prediction.</p>
+                    <a href="henkel_demo.html" class="cta-text">Launch Pilot Demo &rarr;</a>
+                </div>
+                <div class="pilot-visual">
+                    <!-- Placeholder for Atlas Preview -->
+                </div>
+            </div>
+        </div>
+    </section>
 </body>
 </html>
