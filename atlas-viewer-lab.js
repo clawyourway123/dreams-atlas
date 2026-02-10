@@ -32,9 +32,26 @@ let labIndicesBuffer = null;
 // Track current selection
 let labCurrentSelectedId = null;
 
+// Minimal fallbacks so the lab viewer can run standalone without relying
+// on functions from the stable viewer file.
+if (typeof toggleSidebar !== 'function') {
+    function toggleSidebar() {
+        const sidebar = document.querySelector('.sidebar');
+        if (sidebar) sidebar.classList.toggle('open');
+    }
+}
+if (typeof hideLoadingOverlay !== 'function') {
+    function hideLoadingOverlay() {
+        const overlay = document.getElementById('loading-overlay');
+        if (overlay) {
+            overlay.style.opacity = '0';
+            setTimeout(() => { overlay.style.display = 'none'; }, 500);
+        }
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-    // Lab viewer does not depend on the stable initDetailsPanel; details panel
-    // is optional and updateLabDetails() already guards if it doesn't exist.
+    // Lab viewer is self-contained now.
     generateLabData();
 
     let resizeTimeout;
