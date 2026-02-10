@@ -15,7 +15,10 @@ const layout = {
         zaxis: {title: '', showgrid: true, gridcolor: '#333', zerolinecolor: '#333', showticklabels: false, showbackground: false},
         bgcolor: 'rgba(0,0,0,0)',
         aspectmode: 'cube',
-        dragmode: 'orbit'
+        dragmode: 'orbit',
+        camera: {
+            eye: {x: 1.5, y: 1.5, z: 1.5}
+        }
     },
     uirevision: 'atlas-1', 
     hovermode: 'closest',
@@ -30,7 +33,12 @@ document.addEventListener('DOMContentLoaded', () => {
     initComparisonPanel();
     generateData();
     
-    let resizeTimeout;\n    window.addEventListener('resize', () => {\n        clearTimeout(resizeTimeout);\n        resizeTimeout = setTimeout(() => {\n            try { Plotly.Plots.resize('scatter3d'); } catch(e){}\n        }, 150);\n    });
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            try { Plotly.Plots.resize('scatter3d'); } catch(e){}\n        }, 150);
+    });
 
     const toggleBtn = document.getElementById('sidebar-toggle');
     if (toggleBtn) toggleBtn.addEventListener('click', toggleSidebar);
@@ -132,13 +140,7 @@ function generateData() {
             document.getElementById('scatter3d').on('plotly_click', function(data){
                 if(!data || !data.points) return;
                 const pt = data.points[0];
-                let selectedId = (pt.curveNumber === 0) ? ids[pt.pointNumber] : pt.text;
-                if(selectedId) {
-                    const select = document.getElementById('specSelect');
-                    if(select) select.value = selectedId;
-                    highlightSimilar(selectedId);
-                }
-            });
+                let selectedId = (pt.curveNumber === 0) ? ids[pt.pointNumber] : pt.text;\n                if(selectedId) {\n                    const select = document.getElementById('specSelect');\n                    if(select) select.value = selectedId;\n                    highlightSimilar(selectedId);\n                }\n            });
         })
         .catch(err => { console.error(err); hideLoadingOverlay(); });
 }
@@ -157,7 +159,6 @@ async function highlightSimilar(specificId) {
         document.getElementById('detail-xyz').textContent = `${anchor.x.toFixed(1)}, ${anchor.y.toFixed(1)}, ${anchor.z.toFixed(1)}`;
     }
 
-    // Try Backend First (FAISS)
     let topIdx = [];
     try {
         const res = await fetch(`http://localhost:8000/search?id=${encodeURIComponent(specificId)}&k=20`);
@@ -165,7 +166,6 @@ async function highlightSimilar(specificId) {
         const data = await res.json();
         topIdx = data.results.map(r => idToIdx.get(r.id)).filter(i => i !== undefined);
     } catch (e) {
-        // Fallback to client-side
         const dists = new Float32Array(atlasData.length);
         const indices = new Int32Array(atlasData.length);
         const ax = anchor.x, ay = anchor.y, az = anchor.z;
@@ -188,7 +188,13 @@ async function highlightSimilar(specificId) {
     }
 
     Plotly.restyle('scatter3d', { x: [hX], y: [hY], z: [hZ], text: [hText], 'marker.color': [hColor], 'marker.size': [hSize] }, [1]);
-    Plotly.relayout('scatter3d', { 'scene.camera.center': { x: anchor.x, y: anchor.y, z: anchor.z } });
+    
+    // PREMIUM CAMERA: Hero Zoom
+    const ax = anchor.x, ay = anchor.y, az = anchor.z;
+    Plotly.relayout('scatter3d', {
+        'scene.camera.center': { x: ax, y: ay, z: az },
+        'scene.camera.eye': { x: 0.5, y: 0.5, z: 0.5 } // Tight zoom
+    });
 }
 
 function loadComparison(targetName) {
