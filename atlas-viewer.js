@@ -24,6 +24,7 @@ const layout = {
 
 let atlasData = [];
 let idToIdx = new Map();
+let currentSelectedId = null; // tracks which spectrum is selected in UI
 
 // PRE-ALLOCATED BUFFERS (Stop GC crashes)
 let distsBuffer = null;
@@ -99,7 +100,12 @@ function populateSpectrumDropdown(json) {
         fragment.appendChild(opt);
     }
     select.appendChild(fragment);
-    select.onchange = (e) => { if(e.target.value) highlightSimilar(e.target.value); };
+    // Changing the dropdown should ONLY change the selected ID + details, not trigger neighbor search
+    select.onchange = (e) => {
+        if (!e.target.value) return;
+        currentSelectedId = e.target.value;
+        updateDetailsPanel(currentSelectedId);
+    };
 }
 
 function hideLoadingOverlay() {
@@ -152,11 +158,24 @@ function generateData() {
                     setTimeout(() => Plotly.Plots.resize('scatter3d'), 100);
                 });
 
+            // Click on the plot should ONLY select a spectrum (update dropdown + details),
+            // NOT trigger neighbor search. Neighbor search is button-driven.
             document.getElementById('scatter3d').on('plotly_click', function(data){
-                if(!data || !data.points) return;
+                if (!data || !data.points || !data.points.length) return;
                 const pt = data.points[0];
-                let selectedId = (pt.curveNumber === 0) ? ids[pt.pointNumber] : pt.text;
-                if(selectedId) highlightSimilar(selectedId);
+                const ids = baseTrace.text || [];
+                const selectedId = (pt.curveNumber === 0 && ids[pt.pointNumber]) ? ids[pt.pointNumber] : pt.text;
+                if (!selectedId) return;
+                currentSelectedId = selectedId;
+
+                // Sync dropdown
+                const select = document.getElementById('specSelect');
+                if (select) {
+                    select.value = selectedId;
+                }
+
+                // Update details panel only; neighbors are triggered by the button
+                updateDetailsPanel(selectedId);
             });
 
             populateSpectrumDropdown(json);
@@ -164,20 +183,41 @@ function generateData() {
         .catch(err => { console.error(err); hideLoadingOverlay(); });
 }
 
+function updateDetailsPanel(spectrumId) {
+    if (!atlasData.length || !spectrumId) return;
+    const idx = idToIdx.get(spectrumId);
+    if (idx === undefined) return;
+    const anchor = atlasData[idx];
+
+    const p = document.getElementById('details-panel');
+    if (!p) return;
+    p.style.display = 'block';
+    const idEl = document.getElementById('detail-id');
+    const clEl = document.getElementById('detail-cluster');
+    const xyzEl = document.getElementById('detail-xyz');
+    if (idEl) idEl.textContent = anchor.id;
+    if (clEl) clEl.textContent = anchor.cluster;
+    if (xyzEl) xyzEl.textContent = `${anchor.x.toFixed(1)}, ${anchor.y.toFixed(1)}, ${anchor.z.toFixed(1)}`;
+}
+
 async function highlightSimilar(specificId) {
     if (!atlasData.length) return;
-    const anchorIdx = idToIdx.get(specificId);
+
+    // If no ID passed (button click), use the currentSelectedId or dropdown value
+    let idToUse = specificId;
+    if (!idToUse) {
+        const select = document.getElementById('specSelect');
+        if (select && select.value) idToUse = select.value;
+        else idToUse = currentSelectedId;
+    }
+    if (!idToUse) return;
+
+    const anchorIdx = idToIdx.get(idToUse);
     if (anchorIdx === undefined) return;
     const anchor = atlasData[anchorIdx];
 
-    // Details Update
-    const p = document.getElementById('details-panel');
-    if(p) {
-        p.style.display = 'block';
-        document.getElementById('detail-id').textContent = anchor.id;
-        document.getElementById('detail-cluster').textContent = anchor.cluster;
-        document.getElementById('detail-xyz').textContent = `${anchor.x.toFixed(1)}, ${anchor.y.toFixed(1)}, ${anchor.z.toFixed(1)}`;
-    }
+    // Ensure details are up to date
+    updateDetailsPanel(idToUse);
 
     // SIMILARITY CALC (Optimized Client-side using buffers)
     const ax = anchor.x, ay = anchor.y, az = anchor.z;
@@ -187,12 +227,14 @@ async function highlightSimilar(specificId) {
         distsBuffer[i] = dx*dx + dy*dy + dz*dz;
         indicesBuffer[i] = i;
     }
-    indicesBuffer.sort((a, b) => distsBuffer[a] - distsBuffer[b]);
+    // Copy indices into a plain array before sorting to avoid TypedArray.sort quirks
+    const idxArr = Array.from(indicesBuffer);
+    idxArr.sort((a, b) => distsBuffer[a] - distsBuffer[b]);
 
     const k = 20;
     const hX = [], hY = [], hZ = [], hText = [], hColor = [], hSize = [];
     for(let i=0; i<k; i++) {
-        const idx = indicesBuffer[i];
+        const idx = idxArr[i];
         const d = atlasData[idx];
         hX.push(d.x); hY.push(d.y); hZ.push(d.z); hText.push(d.id);
         if(i===0) { hColor.push('#ffffff'); hSize.push(12); } 
