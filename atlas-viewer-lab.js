@@ -37,7 +37,16 @@ let labCurrentSelectedId = null;
 if (typeof toggleSidebar !== 'function') {
     function toggleSidebar() {
         const sidebar = document.querySelector('.sidebar');
-        if (sidebar) sidebar.classList.toggle('open');
+        if (!sidebar) return;
+        sidebar.classList.toggle('collapsed');
+        const main = document.querySelector('.main-view');
+        if (main) {
+            if (sidebar.classList.contains('collapsed')) {
+                main.style.marginLeft = '0';
+            } else {
+                main.style.marginLeft = '';
+            }
+        }
     }
 }
 if (typeof hideLoadingOverlay !== 'function') {

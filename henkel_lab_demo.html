@@ -6,6 +6,22 @@
     <title>Henkel Chemical Space Atlas (Lab / FAISS)</title>
     <script src="https://cdn.plot.ly/plotly-2.35.0.min.js"></script>
     <link rel="stylesheet" href="atlas.css">
+    <style>
+      /* Lab-only: collapsible sidebar + overlay details card */
+      .sidebar.collapsed {
+        transform: translateX(-320px);
+      }
+      .sidebar.collapsed ~ .main-view {
+        margin-left: 0 !important;
+      }
+      .details-overlay {
+        position: fixed;
+        top: 70px;
+        right: 20px;
+        max-width: 260px;
+        z-index: 10;
+      }
+    </style>
 </head>
 <body>
 <div id="loading-overlay">
@@ -49,21 +65,6 @@
         </p>
     </div>
 
-    <div id="details-panel" class="stat-card" style="margin-top: 16px; display:none; border-top: 1px solid #333;">
-        <label style="font-size: 12px; color: #aaa; display: block; margin-bottom: 5px;">Selected Spectrum</label>
-        <div id="detail-id" style="font-weight:bold; color:#fff; word-break:break-all; margin-bottom:5px;"></div>
-        <div style="display:flex; justify-content:space-between; font-size:12px; color:#aaa;">
-            <span>Cluster: <span id="detail-cluster" style="color:#fff;"></span></span>
-        </div>
-        <div style="margin-top:5px; font-size:11px; font-family:monospace; color:#666;">
-            XYZ: <span id="detail-xyz"></span>
-        </div>
-        <div style="margin-top:8px; font-size:11px; color:#aaa;">
-            Most similar (top 10):
-            <ol id="detail-neighbors" style="margin:4px 0 0; padding-left:16px; max-height:120px; overflow-y:auto;"></ol>
-        </div>
-    </div>
-
     <div style="margin-top: 30px; border-top: 1px solid #333; padding-top: 20px;">
         <h2>What you're seeing</h2>
         <ul style="font-size: 12px; color: #aaa; padding-left: 15px; line-height: 1.6;">
@@ -76,6 +77,23 @@
 </div>
 
 <div class="main-view" id="scatter3d"></div>
+
+<div class="details-overlay">
+  <div id="details-panel" class="stat-card" style="display:none; border-top: 1px solid #333;">
+      <label style="font-size: 12px; color: #aaa; display: block; margin-bottom: 5px;">Selected Spectrum</label>
+      <div id="detail-id" style="font-weight:bold; color:#fff; word-break:break-all; margin-bottom:5px;"></div>
+      <div style="display:flex; justify-content:space-between; font-size:12px; color:#aaa;">
+          <span>Cluster: <span id="detail-cluster" style="color:#fff;"></span></span>
+      </div>
+      <div style="margin-top:5px; font-size:11px; font-family:monospace; color:#666;">
+          XYZ: <span id="detail-xyz"></span>
+      </div>
+      <div style="margin-top:8px; font-size:11px; color:#aaa;">
+          Most similar (top 10):
+          <ol id="detail-neighbors" style="margin:4px 0 0; padding-left:16px; max-height:160px; overflow-y:auto;"></ol>
+      </div>
+  </div>
+</div>
 
 <script src="atlas-viewer-lab.js"></script>
 
