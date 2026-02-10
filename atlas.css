@@ -1,0 +1,176 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+body { 
+    margin: 0; 
+    background: #0f1115; 
+    color: #fff; 
+    font-family: 'Inter', sans-serif; 
+    overflow: hidden; 
+}
+
+/* Sidebar */
+.sidebar { 
+    position: absolute; 
+    left: 0; 
+    top: 0; 
+    width: 300px; 
+    height: 100vh; 
+    background: rgba(20, 22, 28, 0.95); 
+    border-right: 1px solid #333; 
+    padding: 20px; 
+    z-index: 100; 
+    backdrop-filter: blur(10px); 
+    overflow-y: auto; 
+    transition: transform 0.3s ease;
+    box-sizing: border-box;
+}
+
+.main-view { 
+    margin-left: 300px; 
+    height: 100vh; 
+    width: calc(100vw - 300px); 
+    transition: margin-left 0.3s ease, width 0.3s ease;
+}
+
+/* Typography */
+h1 { 
+    font-size: 20px; 
+    font-weight: 600; 
+    color: #e1000f; /* Will be overridden by inline styles for specific brands */
+    margin-bottom: 30px; 
+    letter-spacing: 1px; 
+    text-transform: uppercase; 
+}
+
+h2 { 
+    font-size: 14px; 
+    color: #888; 
+    text-transform: uppercase; 
+    margin-top: 20px; 
+    font-weight: 600;
+}
+
+/* Components */
+.stat-card { 
+    background: #1a1d24; 
+    border: 1px solid #333; 
+    border-radius: 8px; 
+    padding: 15px; 
+    margin-bottom: 10px; 
+}
+
+.stat-val { 
+    font-size: 24px; 
+    font-weight: 700; 
+    color: #fff; 
+}
+
+.stat-label { 
+    font-size: 12px; 
+    color: #aaa; 
+}
+
+.btn { 
+    width: 100%; 
+    padding: 12px; 
+    background: #e1000f; 
+    color: white; 
+    border: none; 
+    border-radius: 6px; 
+    font-weight: 600; 
+    cursor: pointer; 
+    transition: all 0.2s ease; 
+    margin-top: 20px; 
+    font-family: 'Inter', sans-serif;
+}
+
+.btn:hover { 
+    filter: brightness(1.2);
+    box-shadow: 0 0 15px rgba(225, 0, 15, 0.4); 
+    transform: translateY(-1px);
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+select {
+    width: 100%; 
+    background: #111; 
+    color: #fff; 
+    border: 1px solid #444; 
+    padding: 8px; 
+    border-radius: 4px;
+    font-family: 'Inter', sans-serif;
+    outline: none;
+}
+
+select:focus {
+    border-color: #666;
+}
+
+/* Loader */
+.loader { 
+    border: 3px solid #333; 
+    border-top: 3px solid #fff; 
+    border-radius: 50%; 
+    width: 20px; 
+    height: 20px; 
+    animation: spin 1s linear infinite; 
+    display: none; 
+    margin: 10px auto; 
+}
+
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+/* Mobile Toggle */
+.mobile-toggle {
+    display: none;
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    z-index: 200;
+    background: rgba(0,0,0,0.8);
+    border: 1px solid #333;
+    color: #fff;
+    padding: 10px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* Initial loading overlay */
+#loading-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: #0f1115;
+    z-index: 999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    transition: opacity 0.5s ease;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .sidebar {
+        transform: translateX(-100%);
+        width: 85%;
+        max-width: 320px;
+        box-shadow: 5px 0 25px rgba(0,0,0,0.5);
+    }
+    
+    .sidebar.open {
+        transform: translateX(0);
+    }
+
+    .main-view {
+        margin-left: 0;
+        width: 100vw;
+    }
+
+    .mobile-toggle {
+        display: block;
+    }
+}

@@ -1,6 +1,6 @@
 
-// DreaMS Atlas Viewer Logic
-// Shared across all client demos
+// DreaMS Atlas Viewer Logic - Balanced for Performance & Visuals
+// Architecture: Dual Trace (Static Background + Dynamic Overlay)
 
 const layout = {
     margin: {l:0, r:0, b:0, t:0},
@@ -12,27 +12,45 @@ const layout = {
         zaxis: {title: '', showgrid: true, gridcolor: '#333', zerolinecolor: '#333', showticklabels: false, showbackground: false},
         bgcolor: 'rgba(0,0,0,0)',
         aspectmode: 'cube',
-        dragmode: 'orbit'
+        dragmode: 'orbit',
+        camera: { eye: {x: 1.5, y: 1.5, z: 1.5} }
     },
-    uirevision: 'atlas-1'
+    uirevision: 'atlas-1', 
+    hovermode: 'closest',
+    showlegend: false
 };
 
 let atlasData = [];
+let idToIdx = new Map();
 
-// Initialize
 document.addEventListener('DOMContentLoaded', () => {
     initDetailsPanel();
     generateData();
+    
+    // Resize handler
+    let resizeTimeout;
     window.addEventListener('resize', () => {
-        try { Plotly.Plots.resize('scatter3d'); } catch(e){}
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            try { Plotly.Plots.resize('scatter3d'); } catch(e){}
+        }, 150);
     });
+
+    // Sidebar Toggle (Mobile)
+    const toggleBtn = document.getElementById('sidebar-toggle');
+    if (toggleBtn) toggleBtn.addEventListener('click', toggleSidebar);
 });
+
+function toggleSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) sidebar.classList.toggle('open');
+}
+window.toggleSidebar = toggleSidebar; 
 
 function initDetailsPanel() {
     const sidebar = document.querySelector('.sidebar');
     if (!sidebar) return;
 
-    // Create Details Panel if not exists
     if (!document.getElementById('details-panel')) {
         const div = document.createElement('div');
         div.id = 'details-panel';
@@ -50,11 +68,8 @@ function initDetailsPanel() {
                 XYZ: <span id="detail-xyz"></span>
             </div>
         `;
-        // Insert before the "What you're seeing" section (usually the last div or close to it)
-        // Or just append after the specific controls
         const similaritySection = Array.from(sidebar.querySelectorAll('h2')).find(h => h.textContent.includes('Similarity'));
         if (similaritySection && similaritySection.nextElementSibling) {
-             // Insert after the similarity container (stat-card)
              similaritySection.nextElementSibling.insertAdjacentElement('afterend', div);
         } else {
              sidebar.appendChild(div);
@@ -65,129 +80,160 @@ function initDetailsPanel() {
 function populateSpectrumDropdown(json) {
     const select = document.getElementById('specSelect');
     if (!select || json.length === 0) return;
-    select.innerHTML = '';
     
+    // Use a simplified approach to avoid blocking UI
+    // Only populate if empty
+    if(select.options.length > 1) return;
+
+    select.innerHTML = '';
     const placeholder = document.createElement('option');
     placeholder.text = "Select a compound...";
     placeholder.value = "";
     select.appendChild(placeholder);
 
-    // Sort alphabetically
-    const sorted = [...json].sort((a, b) => a.id.localeCompare(b.id));
+    // Limit to top 2000 for dropdown performance? 
+    // Or use a virtual list? For now, full list but deferred.
+    // Actually, filling 25k options IS slow.
+    // Let's use requestIdleCallback or setTimeout chunks if we really need it.
+    // For now, standard blocking but optimized via Fragment.
+    
+    const fragment = document.createDocumentFragment();
+    const sorted = json.map(d => d.id).sort();
     
     for (let i = 0; i < sorted.length; i++) {
         const opt = document.createElement('option');
-        opt.value = sorted[i].id;
-        opt.textContent = sorted[i].id;
-        select.appendChild(opt);
+        opt.value = sorted[i];
+        opt.textContent = sorted[i];
+        fragment.appendChild(opt);
+    }
+    select.appendChild(fragment);
+}
+
+function hideLoadingOverlay() {
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) {
+        overlay.style.opacity = '0';
+        setTimeout(() => overlay.style.display = 'none', 500);
     }
 }
 
 function generateData() {
     fetch('atlas_data.json')
-        .then(res => {
-            if (!res.ok) throw new Error("Network response was not ok");
-            return res.json();
-        })
+        .then(res => res.json())
         .then(json => {
             atlasData = json;
-            populateSpectrumDropdown(json);
+            idToIdx.clear();
+            json.forEach((d, i) => idToIdx.set(d.id, i));
 
-            const x = json.map(d => d.x);
-            const y = json.map(d => d.y);
-            const z = json.map(d => d.z);
-            const colors = json.map(d => d.cluster);
-            const ids = json.map(d => d.id);
+            // Async populate dropdown to not block render
+            setTimeout(() => populateSpectrumDropdown(json), 10);
 
-            window.baseColors = colors.slice();
-            window.baseSizes = new Array(json.length).fill(2);
-            window.baseIds = ids.slice();
+            const len = json.length;
+            const x = new Float32Array(len);
+            const y = new Float32Array(len);
+            const z = new Float32Array(len);
+            const colors = new Array(len);
+            const ids = new Array(len);
 
-            window.currentColors = colors.slice();
-            window.currentSizes = new Array(json.length).fill(2);
-            window.lastHighlightedIdx = [];
+            for(let i=0; i<len; i++) {
+                x[i] = json[i].x;
+                y[i] = json[i].y;
+                z[i] = json[i].z;
+                colors[i] = json[i].cluster;
+                ids[i] = json[i].id;
+            }
 
+            // Trace 0: Background (High Fidelity)
+            // Using marker.line.width > 0 adds cost, but user wants "looks".
+            // Let's try 0.5px line for definition without killing it.
             const baseTrace = {
                 x: x, y: y, z: z,
                 mode: 'markers',
                 text: ids,
                 hoverinfo: 'text',
-                marker: { size: window.baseSizes, color: window.baseColors, colorscale: 'Viridis', opacity: 0.6 },
+                marker: { 
+                    size: 3, 
+                    color: colors, 
+                    colorscale: 'Viridis', 
+                    opacity: 0.7, // Higher opacity for "pop"
+                    line: { width: 0 } // Keep 0 for perf, rely on opacity/color
+                },
                 type: 'scatter3d',
-                name: 'All spectra'
+                name: 'Spectra'
             };
-            
-            Plotly.newPlot('scatter3d', [baseTrace], layout).then(() => {
-                // Fix for black screen on some loads: force a resize/redraw
-                setTimeout(() => Plotly.Plots.resize('scatter3d'), 100);
-            });
 
-            // Index for clicks
-            const idToFullIndex = new Map();
-            json.forEach((d, idx) => {
-                idToFullIndex.set(d.id, idx);
-            });
+            // Trace 1: Highlights (Overlay)
+            const highlightTrace = {
+                x: [], y: [], z: [],
+                mode: 'markers',
+                text: [],
+                hoverinfo: 'text',
+                marker: { 
+                    size: [], 
+                    color: [], 
+                    opacity: 1.0,
+                    symbol: 'circle',
+                    line: { width: 2, color: '#fff' } // Distinct highlight
+                },
+                type: 'scatter3d',
+                name: 'Selected'
+            };
 
-            const plotEl = document.getElementById('scatter3d');
-            plotEl.on('plotly_click', function(data){
+            Plotly.newPlot('scatter3d', [baseTrace, highlightTrace], layout, {responsive: true})
+                .then(() => {
+                    hideLoadingOverlay();
+                    // Force a resize to fix black screen issues
+                    setTimeout(() => Plotly.Plots.resize('scatter3d'), 100);
+                });
+
+            // Click Handler
+            document.getElementById('scatter3d').on('plotly_click', function(data){
                 if(!data || !data.points) return;
-                const pointIndex = data.points[0].pointNumber;
                 
-                // Map from rendered point to full atlas id
-                const selectedId = ids[pointIndex];
-                const fullIdx = idToFullIndex.get(selectedId);
-                if (fullIdx == null) return;
+                const pt = data.points[0];
+                let selectedId;
+                
+                if (pt.curveNumber === 0) {
+                    selectedId = ids[pt.pointNumber];
+                } else if (pt.curveNumber === 1) {
+                    selectedId = pt.text;
+                }
+                
+                if(selectedId) {
+                    // Update Dropdown UI (Silent)
+                    const select = document.getElementById('specSelect');
+                    if(select) select.value = selectedId;
+                    
+                    // Trigger Logic
+                    highlightSimilar(selectedId);
 
-                console.log("Clicked:", selectedId);
-                
-                // Update Dropdown
-                const select = document.getElementById('specSelect');
-                if(select) {
-                    select.value = selectedId;
-                    // Trigger update
-                    highlightSimilar();
+                    // Mobile UX
+                    if (window.innerWidth <= 768) {
+                        document.querySelector('.sidebar').classList.remove('open');
+                    }
                 }
             });
         })
         .catch(err => {
-            console.error("Data load failed:", err);
-            const msg = {
-                showlegend: false,
-                annotations: [{
-                    text: "Data Load Failed<br>" + err.message,
-                    font: { size: 14, color: '#ff4444' },
-                    showarrow: false,
-                    align: 'center',
-                    x: 0.5, y: 0.5
-                }]
-            };
-            Plotly.newPlot('scatter3d', [], {...layout, ...msg});
+            console.error(err);
+            hideLoadingOverlay();
         });
 }
 
-function uploadDataset() {
-    const fileInput = document.getElementById('fileUpload');
-    if(fileInput) fileInput.click();
-}
-
-function handleFile(input) {
-    if (input.files && input.files[0]) {
-        alert("Live uploads are disabled for this demo.\n\nTo add spectra, process the MGF file offline with DreaMS and re-run generate_atlas_real.py.");
-        input.value = "";
+function highlightSimilar(specificId) {
+    // 1. Resolve Anchor
+    let anchorId = specificId;
+    if (!anchorId) {
+        const select = document.getElementById('specSelect');
+        if (select) anchorId = select.value;
     }
-}
+    if (!anchorId) return;
 
-function highlightSimilar() {
-    if (!atlasData || atlasData.length === 0) return;
-    
-    const select = document.getElementById('specSelect');
-    if (!select || !select.value) return;
-    
-    const anchorId = select.value;
-    const anchor = atlasData.find(d => d.id === anchorId);
-    if (!anchor) return;
+    const anchorIdx = idToIdx.get(anchorId);
+    if (anchorIdx === undefined) return;
+    const anchor = atlasData[anchorIdx];
 
-    // update details panel
+    // 2. Update Details Panel
     const pPanel = document.getElementById('details-panel');
     if(pPanel) {
         pPanel.style.display = 'block';
@@ -197,62 +243,61 @@ function highlightSimilar() {
             `${anchor.x.toFixed(1)}, ${anchor.y.toFixed(1)}, ${anchor.z.toFixed(1)}`;
     }
 
-    // Compute distances
-    const distances = atlasData.map((d, idx) => {
-        const dx = d.x - anchor.x;
-        const dy = d.y - anchor.y;
-        const dz = d.z - anchor.z;
-        return { idx, dist: Math.sqrt(dx*dx + dy*dy + dz*dz) };
-    });
-    distances.sort((a, b) => a.dist - b.dist);
+    // 3. Calc Neighbors (Optimized Loop)
+    const dists = new Float32Array(atlasData.length);
+    const indices = new Int32Array(atlasData.length);
+    const ax = anchor.x, ay = anchor.y, az = anchor.z;
+    
+    for (let i = 0; i < atlasData.length; i++) {
+        const d = atlasData[i];
+        const dx = d.x - ax, dy = d.y - ay, dz = d.z - az;
+        dists[i] = dx*dx + dy*dy + dz*dz;
+        indices[i] = i;
+    }
+    
+    // Sort top K only? No, partial sort is hard in JS. Full sort is fast enough for 25k.
+    indices.sort((a, b) => dists[a] - dists[b]);
 
-    const k = 50; // Increased context
-    const neighbourIdx = distances.slice(0, k).map(d => d.idx);
+    // 4. Update Highlight Trace
+    const k = 20; 
+    const topIdx = indices.subarray(0, k);
 
-    // Reset old highlights
-    if (window.lastHighlightedIdx && window.lastHighlightedIdx.length > 0) {
-        window.lastHighlightedIdx.forEach(i => {
-            window.currentColors[i] = window.baseColors[i];
-            window.currentSizes[i] = window.baseSizes[i];
-        });
+    const hX = [], hY = [], hZ = [], hText = [], hColor = [], hSize = [];
+    
+    for(let i=0; i<k; i++) {
+        const idx = topIdx[i];
+        const d = atlasData[idx];
+        hX.push(d.x); hY.push(d.y); hZ.push(d.z);
+        hText.push(d.id);
+        
+        if(i===0) { // Anchor
+            hColor.push('#ffffff'); hSize.push(10);
+        } else { // Neighbor
+            hColor.push('#ff4b5c'); hSize.push(6);
+        }
     }
 
-    // Apply new highlights (Red for anchor, Orange for neighbors)
-    neighbourIdx.forEach((i, rank) => {
-        if (rank === 0) {
-            window.currentColors[i] = '#ffffff'; // Anchor white
-            window.currentSizes[i] = 10;
-        } else {
-            window.currentColors[i] = '#ff4b5c'; // Neighbors red
-            window.currentSizes[i] = 6;
-        }
-    });
-
-    window.lastHighlightedIdx = neighbourIdx;
-
-    // Update Plot
+    // RESTYLE TRACE 1 ONLY
     Plotly.restyle('scatter3d', {
-        'marker.color': [window.currentColors],
-        'marker.size': [window.currentSizes]
-    }, [0]);
+        x: [hX], y: [hY], z: [hZ],
+        text: [hText],
+        'marker.color': [hColor],
+        'marker.size': [hSize]
+    }, [1]);
 
-    // ANIMATE CAMERA to focus on the cluster
-    // Target the anchor, pull back along the normal vector towards origin slightly
-    const target = { x: anchor.x, y: anchor.y, z: anchor.z };
-    
-    // Simple zoom: maintain current viewing angle but move closer? 
-    // Or just move camera eye to a fixed offset?
-    // Let's try to keep the camera "orbiting" but center the target.
-    
-    const currentLayout = document.getElementById('scatter3d').layout;
-    let currentEye = currentLayout.scene.camera.eye;
-    
-    // Normalize eye vector to keep distance reasonable
-    // (This is a naive zoom impl; ideally we'd calculate a vector based on cluster spread)
-    
+    // 5. Animate Camera (Optional - does this cause lag?)
+    // Let's keep it but make it smooth.
     Plotly.relayout('scatter3d', {
-        'scene.camera.center': target,
-        // Optional: Zoom in slightly if we are far away, but for now just centering is huge improvement
-        // 'scene.camera.eye': {x: currentEye.x * 0.8, y: currentEye.y * 0.8, z: currentEye.z * 0.8} 
+        'scene.camera.center': { x: ax, y: ay, z: az }
     });
+}
+
+function uploadDataset() {
+    document.getElementById('fileUpload').click();
+}
+function handleFile(input) {
+    if (input.files && input.files[0]) {
+        alert("Live uploads disabled in demo.");
+        input.value = "";
+    }
 }
