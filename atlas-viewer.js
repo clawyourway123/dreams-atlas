@@ -201,13 +201,8 @@ async function highlightSimilar(specificId) {
 
     // RESTYLE TRACE 1 ONLY (The Dynamic Layer)
     Plotly.restyle('scatter3d', { x: [hX], y: [hY], z: [hZ], text: [hText], 'marker.color': [hColor], 'marker.size': [hSize] }, [1]);
-    
-    // Smooth Camera (Relayout is stable here because Trace 0 is static)
-    Plotly.relayout('scatter3d', {
-        'scene.camera.center': { x: ax, y: ay, z: az },
-        'scene.camera.eye': { x: 0.5, y: 0.5, z: 0.5 }
-    });
 }
+
 
 function loadComparison(targetName) {
     const colors = { '3M': '#ff0000', 'BASF': '#004a96' };
