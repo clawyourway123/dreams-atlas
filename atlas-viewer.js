@@ -17,7 +17,12 @@ const layout = {
     },
     uirevision: 'atlas-1', 
     hovermode: 'closest',
-    showlegend: false
+    showlegend: false,
+    hoverlabel: {
+        bgcolor: "#1a1d24",
+        bordercolor: "#333",
+        font: { family: "Inter, sans-serif", color: "#fff" }
+    }
 };
 
 let atlasData = [];
@@ -226,13 +231,9 @@ function highlightSimilar(specificId) {
     const topIdx = indices.subarray(0, k);
 
     // RESTORE SINGLE TRACE RESTYLE LOGIC
-    // Yes, this is O(N) but it is STABLE.
+    const newColors = [...baseColors]; 
+    const newSizes = [...baseSizes];   
     
-    // Create new color/size arrays based on base
-    const newColors = [...baseColors]; // Clone
-    const newSizes = [...baseSizes];   // Clone
-    
-    // Highlight top K
     for(let i=0; i<k; i++) {
         const idx = topIdx[i];
         if(i===0) { // Anchor
@@ -249,7 +250,13 @@ function highlightSimilar(specificId) {
         'marker.size': [newSizes]
     }, [0]);
 
+    // Cinematic Camera Move
     Plotly.relayout('scatter3d', {
         'scene.camera.center': { x: ax, y: ay, z: az }
+    }, {
+        transition: {
+            duration: 1200,
+            easing: 'cubic-in-out'
+        }
     });
 }
