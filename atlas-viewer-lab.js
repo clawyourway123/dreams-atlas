@@ -159,12 +159,13 @@ function populateLabDropdown(json) {
     placeholder.value = "";
     select.appendChild(placeholder);
 
-    const limited = json.slice(0, 1000).sort((a,b) => a.id.localeCompare(b.id));
+    // Lab: include ALL IDs so any clicked point can be reflected in the dropdown
+    const sorted = json.slice().sort((a,b) => a.id.localeCompare(b.id));
     const frag = document.createDocumentFragment();
-    for (let i = 0; i < limited.length; i++) {
+    for (let i = 0; i < sorted.length; i++) {
         const opt = document.createElement('option');
-        opt.value = limited[i].id;
-        opt.textContent = limited[i].id;
+        opt.value = sorted[i].id;
+        opt.textContent = sorted[i].id;
         frag.appendChild(opt);
     }
     select.appendChild(frag);
@@ -173,7 +174,7 @@ function populateLabDropdown(json) {
         if (!e.target.value) return;
         labCurrentSelectedId = e.target.value;
         updateLabDetails(labCurrentSelectedId);
-        // In lab mode, changing dropdown can also trigger FAISS search
+        // In lab mode, changing dropdown triggers FAISS search
         labHighlightSimilarFAISS(labCurrentSelectedId);
     };
 }
