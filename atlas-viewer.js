@@ -35,9 +35,9 @@ document.addEventListener('DOMContentLoaded', () => {
     generateData();
     
     let resizeTimeout;
-    window.addEventListener('resize', () => {
+    window.addEventListener('resize', function() {
         clearTimeout(resizeTimeout);
-        resizeTimeout = setTimeout(() => {
+        resizeTimeout = setTimeout(function() {
             try { Plotly.Plots.resize('scatter3d'); } catch(e){}
         }, 200);
     });
