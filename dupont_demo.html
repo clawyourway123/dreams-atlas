@@ -8,7 +8,7 @@
     <script src="https://cdn.plot.ly/plotly-2.35.0.min.js"></script>
     <style>
         body { margin: 0; background: #0f1115; color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; }
-        .sidebar { position: absolute; left: 0; top: 0; width: 300px; height: 100vh; background: rgba(20, 22, 28, 0.95); border-right: 1px solid #333; padding: 20px; z-index: 10; backdrop-filter: blur(10px); }
+        .sidebar { position: absolute; left: 0; top: 0; width: 300px; height: 100vh; background: rgba(20, 22, 28, 0.95); border-right: 1px solid #333; padding: 20px; z-index: 10; backdrop-filter: blur(10px); overflow-y: auto; }
         .main-view { margin-left: 300px; height: 100vh; width: calc(100vw - 300px); }
         
         h1 { font-size: 20px; font-weight: 600; color: #e1000f; margin-bottom: 30px; letter-spacing: 1px; text-transform: uppercase; }
@@ -64,184 +64,20 @@
         <div class="loader" id="loader"></div>
     </button>
     <input type="file" id="fileUpload" style="display:none" accept=".mgf,.txt,.csv" onchange="handleFile(this)">
+
+    <div style="margin-top: 30px; border-top: 1px solid #333; padding-top: 20px;">
+        <h2>What you're seeing</h2>
+        <ul style="font-size: 12px; color: #aaa; padding-left: 15px; line-height: 1.6;">
+            <li style="margin-bottom: 8px;"><strong>24,000+ Spectra:</strong> Complete map of DuPont proprietary adhesive formulations.</li>
+            <li style="margin-bottom: 8px;"><strong>AI Similarity:</strong> Distance equals chemical relatedness; clusters show property groups.</li>
+            <li><strong>Interactive:</strong> Rotate, zoom, and click to explore the manifold.</li>
+        </ul>
+    </div>
 </div>
 
 <div class="main-view" id="scatter3d"></div>
 
-<script>
-    const layout = {
-        margin: {l:0, r:0, b:0, t:0},
-        paper_bgcolor: '#0f1115',
-        plot_bgcolor: '#0f1115',
-        scene: {
-            xaxis: {title: '', showgrid: true, gridcolor: '#333', zerolinecolor: '#333', showticklabels: false, showbackground: false},
-            yaxis: {title: '', showgrid: true, gridcolor: '#333', zerolinecolor: '#333', showticklabels: false, showbackground: false},
-            zaxis: {title: '', showgrid: true, gridcolor: '#333', zerolinecolor: '#333', showticklabels: false, showbackground: false},
-            bgcolor: 'rgba(0,0,0,0)', // Transparent scene bg
-            aspectmode: 'cube',
-            dragmode: 'orbit'
-        },
-        uirevision: 'atlas-1'
-    };
-
-    // Global cache of points for similarity search
-    let atlasData = [];
-
-    function populateSpectrumDropdown(json) {
-        const select = document.getElementById('specSelect');
-        if (!select || json.length === 0) return;
-        select.innerHTML = '';
-        
-        const placeholder = document.createElement('option');
-        placeholder.text = "Select a compound...";
-        placeholder.value = "";
-        select.appendChild(placeholder);
-
-        // Sort alphabetically
-        const sorted = [...json].sort((a, b) => a.id.localeCompare(b.id));
-        
-        for (let i = 0; i < sorted.length; i++) {
-            const opt = document.createElement('option');
-            opt.value = sorted[i].id;
-            opt.textContent = sorted[i].id;
-            select.appendChild(opt);
-        }
-    }
-
-    function generateData(targetPoints) {
-        // Load real data if available, else mock
-        fetch('atlas_data.json')
-            .then(res => res.json())
-            .then(json => {
-                atlasData = json; // cache for similarity
-                populateSpectrumDropdown(json);
-
-                // Use full dataset for rendering, but keep styling light
-                const x = json.map(d => d.x);
-                const y = json.map(d => d.y);
-                const z = json.map(d => d.z);
-                const colors = json.map(d => d.cluster);
-                const ids = json.map(d => d.id);
-
-                // Cache base styles globally so we can highlight via color/size only
-                window.baseColors = colors.slice();
-                window.baseSizes = new Array(json.length).fill(2);
-                window.baseIds = ids.slice();
-
-                const baseTrace = {
-                    x: x, y: y, z: z,
-                    mode: 'markers',
-                    text: ids,
-                    hoverinfo: 'text',
-                    marker: { size: window.baseSizes, color: window.baseColors, colorscale: 'Viridis', opacity: 0.6 },
-                    type: 'scatter3d',
-                    name: 'All spectra'
-                };
-                
-                Plotly.newPlot('scatter3d', [baseTrace], layout);
-
-                // Build a quick lookup from ids -> full atlas index
-                const idToFullIndex = new Map();
-                json.forEach((d, idx) => {
-                    idToFullIndex.set(d.id, idx);
-                });
-
-                // WIRE CLICK EVENT
-                document.getElementById('scatter3d').on('plotly_click', function(data){
-                    if(!data || !data.points) return;
-                    const pointIndex = data.points[0].pointNumber;
-                    const curveNum = data.points[0].curveNumber;
-                    
-                    if (curveNum !== 0) return; // Only base layer clicks
-
-                    // Map from rendered point to full atlas id
-                    const selectedId = ids[pointIndex];
-                    const fullIdx = idToFullIndex.get(selectedId);
-                    if (fullIdx == null) return;
-
-                    console.log("Clicked:", selectedId);
-                    
-                    const select = document.getElementById('specSelect');
-                    if(select) {
-                        select.value = selectedId;
-                        highlightSimilar();
-                    }
-                });
-            })
-            .catch(err => {
-                console.log("No backend data found. Run generate_atlas_real.py.");
-                // No fake cubes. Show empty or error state.
-                const trace = {
-                    x: [], y: [], z: [],
-                    mode: 'markers',
-                    type: 'scatter3d',
-                    name: 'No Data'
-                };
-                const msg = {
-                    showlegend: true,
-                    annotations: [{
-                        text: "No Atlas Data Found<br>Run generate_atlas_real.py",
-                        font: { size: 14, color: '#ff4444' },
-                        showarrow: false,
-                        align: 'center',
-                        x: 0.5, y: 0.5
-                    }]
-                };
-                Plotly.react('scatter3d', [trace], {...layout, ...msg});
-            });
-    }
-
-    generateData(5000);
-
-    function uploadDataset() {
-        document.getElementById('fileUpload').click();
-    }
-
-    function handleFile(input) {
-        if (input.files && input.files[0]) {
-            alert("Live uploads are disabled for this demo.\n\nTo add spectra, process the MGF file offline with DreaMS and re-run generate_atlas_real.py.");
-            input.value = ""; // clear input
-        }
-    }
-
-    function highlightSimilar() {
-        if (!atlasData || atlasData.length === 0) return;
-        
-        const select = document.getElementById('specSelect');
-        if (!select || !select.value) return;
-        
-        const anchorId = select.value;
-        const anchor = atlasData.find(d => d.id === anchorId);
-        if (!anchor) return;
-
-        // Compute distances
-        const distances = atlasData.map((d, idx) => {
-            const dx = d.x - anchor.x;
-            const dy = d.y - anchor.y;
-            const dz = d.z - anchor.z;
-            return { idx, dist: Math.sqrt(dx*dx + dy*dy + dz*dz) };
-        });
-        distances.sort((a, b) => a.dist - b.dist);
-
-        const k = 12; 
-        const neighbourIdx = distances.slice(0, k).map(d => d.idx);
-
-        // Start from base styles and just tweak the similar ones
-        const newColors = window.baseColors ? window.baseColors.slice() : atlasData.map(d => d.cluster);
-        const newSizes = window.baseSizes ? window.baseSizes.slice() : new Array(atlasData.length).fill(2);
-
-        neighbourIdx.forEach(i => {
-            newColors[i] = '#ff4b5c';
-            newSizes[i] = 6;
-        });
-
-        // Update marker color/size in-place on the single trace (no extra WebGL trace)
-        Plotly.restyle('scatter3d', {
-            'marker.color': [newColors],
-            'marker.size': [newSizes]
-        }, [0]);
-    }
-</script>
+<script src="atlas-viewer.js"></script>
 
 </body>
 </html>
