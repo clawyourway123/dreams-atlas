@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: dreams-faiss-backend
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: "pip install -r backend/requirements.txt"
+    startCommand: "python -m backend.server"
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
