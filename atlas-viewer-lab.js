@@ -32,8 +32,14 @@ let labIndicesBuffer = null;
 // Track current selection
 let labCurrentSelectedId = null;
 
+// If the stable viewer's initDetailsPanel isn't present (lab used standalone),
+// define a minimal no-op-safe version.
+if (typeof initDetailsPanel !== 'function') {
+    function initDetailsPanel() { /* no-op in lab mode if not defined */ }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-    initDetailsPanel(); // reuse from atlas-viewer.js if present; otherwise no-op
+    initDetailsPanel(); // reuse from atlas-viewer.js if present; otherwise safe no-op
     generateLabData();
 
     let resizeTimeout;
