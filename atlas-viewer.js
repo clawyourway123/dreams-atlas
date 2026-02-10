@@ -158,24 +158,10 @@ function generateData() {
                     setTimeout(() => Plotly.Plots.resize('scatter3d'), 100);
                 });
 
-            // Click on the plot should ONLY select a spectrum (update dropdown + details),
-            // NOT trigger neighbor search. Neighbor search is button-driven.
+            // TEMP: Disable all plot click behavior to guarantee no neighbor search
+            // is ever triggered from clicking a molecule. Selection happens via sidebar only.
             document.getElementById('scatter3d').on('plotly_click', function(data){
-                if (!data || !data.points || !data.points.length) return;
-                const pt = data.points[0];
-                const ids = baseTrace.text || [];
-                const selectedId = (pt.curveNumber === 0 && ids[pt.pointNumber]) ? ids[pt.pointNumber] : pt.text;
-                if (!selectedId) return;
-                currentSelectedId = selectedId;
-
-                // Sync dropdown
-                const select = document.getElementById('specSelect');
-                if (select) {
-                    select.value = selectedId;
-                }
-
-                // Update details panel only; neighbors are triggered by the button
-                updateDetailsPanel(selectedId);
+                return; // no-op on click
             });
 
             populateSpectrumDropdown(json);
