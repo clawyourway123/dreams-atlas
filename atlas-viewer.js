@@ -1,6 +1,6 @@
 
-// DreaMS Atlas Viewer Logic - Balanced for Performance & Visuals
-// Architecture: Dual Trace (Static Background + Dynamic Overlay)
+// DreaMS Atlas Viewer Logic - RESTORED TO STABLE SINGLE-TRACE
+// This reverts the Dual-Trace experiment to fix rendering freezes and visual fidelity.
 
 const layout = {
     margin: {l:0, r:0, b:0, t:0},
@@ -22,6 +22,8 @@ const layout = {
 
 let atlasData = [];
 let idToIdx = new Map();
+let baseColors = []; // Cache for reset
+let baseSizes = []; // Cache for reset
 
 document.addEventListener('DOMContentLoaded', () => {
     initDetailsPanel();
@@ -81,8 +83,6 @@ function populateSpectrumDropdown(json) {
     const select = document.getElementById('specSelect');
     if (!select || json.length === 0) return;
     
-    // Use a simplified approach to avoid blocking UI
-    // Only populate if empty
     if(select.options.length > 1) return;
 
     select.innerHTML = '';
@@ -91,12 +91,6 @@ function populateSpectrumDropdown(json) {
     placeholder.value = "";
     select.appendChild(placeholder);
 
-    // Limit to top 2000 for dropdown performance? 
-    // Or use a virtual list? For now, full list but deferred.
-    // Actually, filling 25k options IS slow.
-    // Let's use requestIdleCallback or setTimeout chunks if we really need it.
-    // For now, standard blocking but optimized via Fragment.
-    
     const fragment = document.createDocumentFragment();
     const sorted = json.map(d => d.id).sort();
     
@@ -125,7 +119,6 @@ function generateData() {
             idToIdx.clear();
             json.forEach((d, i) => idToIdx.set(d.id, i));
 
-            // Async populate dropdown to not block render
             setTimeout(() => populateSpectrumDropdown(json), 10);
 
             const len = json.length;
@@ -143,46 +136,30 @@ function generateData() {
                 ids[i] = json[i].id;
             }
 
-            // Trace 0: Background (High Fidelity)
-            // Using marker.line.width > 0 adds cost, but user wants "looks".
-            // Let's try 0.5px line for definition without killing it.
-            const baseTrace = {
+            // Cache for reset
+            baseColors = colors.slice();
+            baseSizes = new Array(len).fill(3);
+
+            // SINGLE TRACE: High Fidelity
+            const trace = {
                 x: x, y: y, z: z,
                 mode: 'markers',
                 text: ids,
                 hoverinfo: 'text',
                 marker: { 
-                    size: 3, 
-                    color: colors, 
+                    size: baseSizes, 
+                    color: baseColors, 
                     colorscale: 'Viridis', 
-                    opacity: 0.7, // Higher opacity for "pop"
-                    line: { width: 0 } // Keep 0 for perf, rely on opacity/color
+                    opacity: 0.6, // Transparent for depth
+                    line: { width: 0.5, color: 'rgba(255,255,255,0.2)' } // Subtle border for definition
                 },
                 type: 'scatter3d',
                 name: 'Spectra'
             };
 
-            // Trace 1: Highlights (Overlay)
-            const highlightTrace = {
-                x: [], y: [], z: [],
-                mode: 'markers',
-                text: [],
-                hoverinfo: 'text',
-                marker: { 
-                    size: [], 
-                    color: [], 
-                    opacity: 1.0,
-                    symbol: 'circle',
-                    line: { width: 2, color: '#fff' } // Distinct highlight
-                },
-                type: 'scatter3d',
-                name: 'Selected'
-            };
-
-            Plotly.newPlot('scatter3d', [baseTrace, highlightTrace], layout, {responsive: true})
+            Plotly.newPlot('scatter3d', [trace], layout, {responsive: true})
                 .then(() => {
                     hideLoadingOverlay();
-                    // Force a resize to fix black screen issues
                     setTimeout(() => Plotly.Plots.resize('scatter3d'), 100);
                 });
 
@@ -191,23 +168,14 @@ function generateData() {
                 if(!data || !data.points) return;
                 
                 const pt = data.points[0];
-                let selectedId;
-                
-                if (pt.curveNumber === 0) {
-                    selectedId = ids[pt.pointNumber];
-                } else if (pt.curveNumber === 1) {
-                    selectedId = pt.text;
-                }
+                const selectedId = ids[pt.pointNumber];
                 
                 if(selectedId) {
-                    // Update Dropdown UI (Silent)
                     const select = document.getElementById('specSelect');
                     if(select) select.value = selectedId;
                     
-                    // Trigger Logic
                     highlightSimilar(selectedId);
 
-                    // Mobile UX
                     if (window.innerWidth <= 768) {
                         document.querySelector('.sidebar').classList.remove('open');
                     }
@@ -221,7 +189,6 @@ function generateData() {
 }
 
 function highlightSimilar(specificId) {
-    // 1. Resolve Anchor
     let anchorId = specificId;
     if (!anchorId) {
         const select = document.getElementById('specSelect');
@@ -233,7 +200,6 @@ function highlightSimilar(specificId) {
     if (anchorIdx === undefined) return;
     const anchor = atlasData[anchorIdx];
 
-    // 2. Update Details Panel
     const pPanel = document.getElementById('details-panel');
     if(pPanel) {
         pPanel.style.display = 'block';
@@ -243,7 +209,6 @@ function highlightSimilar(specificId) {
             `${anchor.x.toFixed(1)}, ${anchor.y.toFixed(1)}, ${anchor.z.toFixed(1)}`;
     }
 
-    // 3. Calc Neighbors (Optimized Loop)
     const dists = new Float32Array(atlasData.length);
     const indices = new Int32Array(atlasData.length);
     const ax = anchor.x, ay = anchor.y, az = anchor.z;
@@ -255,49 +220,36 @@ function highlightSimilar(specificId) {
         indices[i] = i;
     }
     
-    // Sort top K only? No, partial sort is hard in JS. Full sort is fast enough for 25k.
     indices.sort((a, b) => dists[a] - dists[b]);
 
-    // 4. Update Highlight Trace
     const k = 20; 
     const topIdx = indices.subarray(0, k);
 
-    const hX = [], hY = [], hZ = [], hText = [], hColor = [], hSize = [];
+    // RESTORE SINGLE TRACE RESTYLE LOGIC
+    // Yes, this is O(N) but it is STABLE.
     
+    // Create new color/size arrays based on base
+    const newColors = [...baseColors]; // Clone
+    const newSizes = [...baseSizes];   // Clone
+    
+    // Highlight top K
     for(let i=0; i<k; i++) {
         const idx = topIdx[i];
-        const d = atlasData[idx];
-        hX.push(d.x); hY.push(d.y); hZ.push(d.z);
-        hText.push(d.id);
-        
         if(i===0) { // Anchor
-            hColor.push('#ffffff'); hSize.push(10);
+            newColors[idx] = '#ffffff'; 
+            newSizes[idx] = 10;
         } else { // Neighbor
-            hColor.push('#ff4b5c'); hSize.push(6);
+            newColors[idx] = '#ff4b5c'; 
+            newSizes[idx] = 6;
         }
     }
 
-    // RESTYLE TRACE 1 ONLY
     Plotly.restyle('scatter3d', {
-        x: [hX], y: [hY], z: [hZ],
-        text: [hText],
-        'marker.color': [hColor],
-        'marker.size': [hSize]
-    }, [1]);
+        'marker.color': [newColors],
+        'marker.size': [newSizes]
+    }, [0]);
 
-    // 5. Animate Camera (Optional - does this cause lag?)
-    // Let's keep it but make it smooth.
     Plotly.relayout('scatter3d', {
         'scene.camera.center': { x: ax, y: ay, z: az }
     });
-}
-
-function uploadDataset() {
-    document.getElementById('fileUpload').click();
-}
-function handleFile(input) {
-    if (input.files && input.files[0]) {
-        alert("Live uploads disabled in demo.");
-        input.value = "";
-    }
 }
