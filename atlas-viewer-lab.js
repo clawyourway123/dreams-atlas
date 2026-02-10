@@ -234,14 +234,28 @@ async function labHighlightSimilarFAISS(id) {
 
     // 3) Build highlight trace data
     const hX = [], hY = [], hZ = [], hText = [], hColor = [], hSize = [];
+    const neighborList = [];
     for (let i = 0; i < neighborIds.length; i++) {
         const nid = neighborIds[i];
         const idx = labIdToIdx.get(nid);
         if (idx === undefined) continue;
         const d = labAtlasData[idx];
         hX.push(d.x); hY.push(d.y); hZ.push(d.z); hText.push(d.id);
+        neighborList.push(d.id);
         if (i === 0) { hColor.push('#ffffff'); hSize.push(12); }
         else { hColor.push('#ff4b5c'); hSize.push(6); }
+    }
+
+    // Update neighbor list in details panel (top 10 only)
+    const listEl = document.getElementById('detail-neighbors');
+    if (listEl) {
+        listEl.innerHTML = '';
+        const topShow = Math.min(10, neighborList.length);
+        for (let i = 0; i < topShow; i++) {
+            const li = document.createElement('li');
+            li.textContent = neighborList[i];
+            listEl.appendChild(li);
+        }
     }
 
     Plotly.restyle('scatter3d', {

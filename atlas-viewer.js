@@ -63,7 +63,7 @@ function initDetailsPanel() {
         div.style.display = 'none';
         div.style.marginTop = '20px';
         div.style.borderTop = '1px solid #333';
-        div.innerHTML = `\n            <label style=\"font-size: 12px; color: #aaa; display: block; margin-bottom: 5px;\">Selected Spectrum</label>\n            <div id=\"detail-id\" style=\"font-weight:bold; color:#fff; word-break:break-all; margin-bottom:5px;\"></div>\n            <div style=\"display:flex; justify-content:space-between; font-size:12px; color:#aaa;\">\n                <span>Cluster: <span id=\"detail-cluster\" style=\"color:#fff;\"></span></span>\n            </div>\n            <div style=\"margin-top:5px; font-size:11px; font-family:monospace; color:#666;\">\n                XYZ: <span id=\"detail-xyz\"></span>\n            </div>\n        `;
+        div.innerHTML = `\n            <label style=\"font-size: 12px; color: #aaa; display: block; margin-bottom: 5px;\">Selected Spectrum</label>\n            <div id=\"detail-id\" style=\"font-weight:bold; color:#fff; word-break:break-all; margin-bottom:5px;\"></div>\n            <div style=\"display:flex; justify-content:space-between; font-size:12px; color:#aaa;\">\n                <span>Cluster: <span id=\"detail-cluster\" style=\"color:#fff;\"></span></span>\n            </div>\n            <div style=\"margin-top:5px; font-size:11px; font-family:monospace; color:#666;\">\n                XYZ: <span id=\"detail-xyz\"></span>\n            </div>\n            <div style=\"margin-top:8px; font-size:11px; color:#aaa;\">\n                Most similar (top 10):\n                <ol id=\"detail-neighbors\" style=\"margin:4px 0 0; padding-left:16px; max-height:120px; overflow-y:auto;\"></ol>\n            </div>\n        `;
         const simSection = Array.from(sidebar.querySelectorAll('h2')).find(h => h.textContent.includes('Similarity'));
         if (simSection && simSection.nextElementSibling) {
              simSection.nextElementSibling.insertAdjacentElement('afterend', div);
@@ -198,37 +198,8 @@ async function highlightSimilar(specificId) {
     }
     if (!idToUse) return;
 
-    const anchorIdx = idToIdx.get(idToUse);
-    if (anchorIdx === undefined) return;
-    const anchor = atlasData[anchorIdx];
-
-    // Ensure details are up to date
+    // Just update the details panel; do NOT run similarity or restyle the plot.
     updateDetailsPanel(idToUse);
-
-    // SIMILARITY CALC (Optimized Client-side using buffers)
-    const ax = anchor.x, ay = anchor.y, az = anchor.z;
-    for (let i = 0; i < atlasData.length; i++) {
-        const d = atlasData[i];
-        const dx = d.x - ax, dy = d.y - ay, dz = d.z - az;
-        distsBuffer[i] = dx*dx + dy*dy + dz*dz;
-        indicesBuffer[i] = i;
-    }
-    // Copy indices into a plain array before sorting to avoid TypedArray.sort quirks
-    const idxArr = Array.from(indicesBuffer);
-    idxArr.sort((a, b) => distsBuffer[a] - distsBuffer[b]);
-
-    const k = 20;
-    const hX = [], hY = [], hZ = [], hText = [], hColor = [], hSize = [];
-    for(let i=0; i<k; i++) {
-        const idx = idxArr[i];
-        const d = atlasData[idx];
-        hX.push(d.x); hY.push(d.y); hZ.push(d.z); hText.push(d.id);
-        if(i===0) { hColor.push('#ffffff'); hSize.push(12); } 
-        else { hColor.push('#ff4b5c'); hSize.push(6); }
-    }
-
-    // RESTYLE TRACE 1 ONLY (The Dynamic Layer)
-    Plotly.restyle('scatter3d', { x: [hX], y: [hY], z: [hZ], text: [hText], 'marker.color': [hColor], 'marker.size': [hSize] }, [1]);
 }
 
 
