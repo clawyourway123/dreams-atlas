@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -12,96 +11,261 @@
         :root {
             --accent: #e1000f;
             --accent-hover: #ff1a2b;
-            --glass: rgba(255, 255, 255, 0.03);
-            --border: rgba(255, 255, 255, 0.1);
-            --text-main: #fff;
-            --text-dim: #aaa;
+            --bg-deep: #0a0a0a;
+            --text-main: #ffffff;
+            --text-dim: #a1a1aa;
+            
+            /* Glass System */
+            --glass-surface: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-highlight: rgba(255, 255, 255, 0.15);
+            --glass-blur: 16px;
+            
+            /* Stripe-inspired Shadows */
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);
+            --shadow-md: 0 12px 24px -6px rgba(0,0,0,0.5), 0 4px 8px -2px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1);
+            --shadow-lg: 0 24px 48px -12px rgba(0,0,0,0.7), 0 12px 24px -6px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
+            --shadow-red: 0 20px 40px -10px rgba(225, 0, 15, 0.15), inset 0 0 20px rgba(225, 0, 15, 0.05);
+
+            /* Animations */
+            --ease-out-quart: cubic-bezier(0.165, 0.84, 0.44, 1);
         }
-        body { margin: 0; font-family: 'Inter', sans-serif; background: #000; color: var(--text-main); text-align: center; scroll-behavior: smooth; }
-        .container { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
+
+        body { 
+            margin: 0; 
+            font-family: 'Inter', sans-serif; 
+            background-color: #000;
+            background-image: 
+                radial-gradient(circle at 50% 0%, #1a1a1a 0%, #000 60%),
+                url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+            color: var(--text-main); 
+            text-align: center; 
+            scroll-behavior: smooth;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container { max-width: 1100px; margin: 0 auto; padding: 0 20px; position: relative; z-index: 10; }
         
+        /* Utility: Glass Engine */
+        .glass {
+            background: var(--glass-surface);
+            backdrop-filter: blur(var(--glass-blur));
+            -webkit-backdrop-filter: blur(var(--glass-blur));
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--shadow-sm);
+            border-radius: 24px;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.4s var(--ease-out-quart), box-shadow 0.4s var(--ease-out-quart), border-color 0.4s ease;
+        }
+
+        /* Top-light Highlight effect */
+        .glass::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%);
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .glass-interactive:hover {
+            transform: translateY(-6px) scale(1.005);
+            box-shadow: var(--shadow-md);
+            border-color: rgba(255,255,255,0.15);
+        }
+
+        .glass-accent-red:hover {
+            box-shadow: var(--shadow-lg), var(--shadow-red);
+            border-color: rgba(225, 0, 15, 0.4);
+        }
+
         /* Hero */
-        .hero { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%); padding: 100px 0; }
-        h1 { font-size: 4.5rem; font-weight: 800; margin-bottom: 20px; background: linear-gradient(to right, #fff, #888); -webkit-background-clip: text; color: transparent; letter-spacing: -2px; }
-        .hero p { font-size: 1.5rem; color: var(--text-dim); max-width: 700px; line-height: 1.5; margin-bottom: 50px; }
-        .cta { padding: 18px 45px; font-size: 1.1rem; font-weight: 600; background: var(--accent); color: white; border: none; border-radius: 50px; cursor: pointer; text-decoration: none; transition: 0.3s; box-shadow: 0 10px 20px rgba(225, 0, 15, 0.2); }
-        .cta:hover { background: var(--accent-hover); transform: translateY(-2px); box-shadow: 0 15px 25px rgba(225, 0, 15, 0.3); }
+        .hero { 
+            min-height: 90vh; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center; 
+            padding: 100px 0; 
+            position: relative;
+        }
+        
+        /* Background Mesh/Glow */
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -20%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80vw;
+            height: 80vw;
+            background: radial-gradient(circle, rgba(255,255,255,0.03) 0%, rgba(0,0,0,0) 60%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        h1 { 
+            font-size: 5rem; 
+            font-weight: 800; 
+            margin-bottom: 24px; 
+            background: linear-gradient(180deg, #fff 0%, #a1a1aa 100%); 
+            -webkit-background-clip: text; 
+            color: transparent; 
+            letter-spacing: -3px; 
+            line-height: 0.95;
+            position: relative;
+            z-index: 10;
+        }
+
+        .hero p { 
+            font-size: 1.25rem; 
+            color: var(--text-dim); 
+            max-width: 640px; 
+            line-height: 1.6; 
+            margin-bottom: 48px; 
+            position: relative;
+            z-index: 10;
+        }
+
+        .cta { 
+            padding: 16px 40px; 
+            font-size: 1rem; 
+            font-weight: 600; 
+            background: var(--accent); 
+            color: white; 
+            border: none; 
+            border-radius: 99px; 
+            cursor: pointer; 
+            text-decoration: none; 
+            transition: all 0.3s var(--ease-out-quart); 
+            box-shadow: 0 4px 12px rgba(225, 0, 15, 0.3), inset 0 1px 0 rgba(255,255,255,0.2);
+            position: relative;
+            z-index: 10;
+        }
+        .cta:hover { 
+            background: var(--accent-hover); 
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 24px rgba(225, 0, 15, 0.5), inset 0 1px 0 rgba(255,255,255,0.3); 
+        }
+        
+        /* Bento Grid */
+        .benefits-section { padding: 100px 0; border-top: 1px solid rgba(255,255,255,0.05); }
+        .section-label { 
+            font-family: 'JetBrains Mono', monospace; 
+            font-size: 12px; 
+            color: var(--accent); 
+            text-transform: uppercase; 
+            letter-spacing: 2px; 
+            margin-bottom: 40px; 
+            display: block; 
+            opacity: 0.9;
+        }
+
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            margin-top: 20px;
+        }
+        
+        .bento-item {
+            padding: 40px;
+            text-align: left;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .bento-item h3 { font-size: 1.25rem; font-weight: 700; margin-bottom: 12px; margin-top: 0; letter-spacing: -0.5px; }
+        .bento-item p { font-size: 0.95rem; color: var(--text-dim); line-height: 1.6; margin: 0; }
+        
+        .bento-icon {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--accent);
+            margin-bottom: 20px;
+            display: inline-block;
+            padding: 4px 8px;
+            background: rgba(225, 0, 15, 0.1);
+            border-radius: 4px;
+            border: 1px solid rgba(225, 0, 15, 0.2);
+        }
+        
+        .bento-wide { grid-column: span 2; }
         
         /* Enterprise Pilot Section */
-        .pilot-section { padding: 120px 0; background: #000; border-top: 1px solid var(--border); }
-        .section-label { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--accent); text-transform: uppercase; letter-spacing: 3px; margin-bottom: 30px; display: block; }
+        .pilot-section { padding: 120px 0; }
+        
         .pilot-card { 
             display: flex; 
-            background: var(--glass); 
-            border: 1px solid var(--border); 
-            border-radius: 24px; 
+            /* Inherits glass styles via class */
             overflow: hidden; 
             text-align: left;
-            transition: 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
         }
-        .pilot-card:hover { border-color: rgba(255, 255, 255, 0.2); transform: translateY(-5px); }
-        .pilot-content { flex: 1.2; padding: 60px; }
-        .pilot-content h2 { font-size: 32px; font-weight: 700; margin-bottom: 20px; margin-top: 0; }
-        .pilot-content p { font-size: 18px; color: var(--text-dim); line-height: 1.6; margin-bottom: 40px; }
-        .cta-text { color: #fff; text-decoration: none; font-weight: 600; border-bottom: 2px solid var(--accent); padding-bottom: 5px; transition: 0.2s; font-size: 16px; }
-        .cta-text:hover { color: var(--accent); }
-        .pilot-visual { flex: 1; background: radial-gradient(circle at center, #222 0%, #050505 100%); display: flex; align-items: center; justify-content: center; position: relative; border-left: 1px solid var(--border); }
-        .pilot-visual::after { content: "PILOT PREVIEW"; font-family: 'JetBrains Mono'; font-size: 10px; color: #444; letter-spacing: 2px; }
+        
+        .pilot-content { flex: 1.2; padding: 60px; display: flex; flex-direction: column; justify-content: center; }
+        .pilot-content h2 { font-size: 2.5rem; font-weight: 800; margin-bottom: 16px; margin-top: 0; letter-spacing: -1px; }
+        .pilot-content p { font-size: 1.1rem; color: var(--text-dim); line-height: 1.6; margin-bottom: 40px; max-width: 480px; }
+        
+        .cta-text { 
+            color: #fff; 
+            text-decoration: none; 
+            font-weight: 600; 
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1rem; 
+            transition: 0.2s; 
+        }
+        .cta-text:hover { color: var(--accent); gap: 12px; }
+        
+        .pilot-visual { 
+            flex: 1; 
+            background: 
+                radial-gradient(circle at center, #151515 0%, #080808 100%);
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            position: relative; 
+            border-left: 1px solid var(--glass-border); 
+        }
+        
+        /* Visual Placeholder Art */
+        .pilot-visual::before {
+            content: '';
+            width: 200px;
+            height: 200px;
+            background: conic-gradient(from 0deg, transparent 0%, var(--accent) 100%);
+            border-radius: 50%;
+            opacity: 0.1;
+            filter: blur(40px);
+            position: absolute;
+        }
+        
+        .pilot-visual::after { 
+            content: "PILOT PREVIEW // 09"; 
+            font-family: 'JetBrains Mono'; 
+            font-size: 10px; 
+            color: #555; 
+            letter-spacing: 2px; 
+            z-index: 2;
+        }
 
         @media (max-width: 900px) {
             .pilot-card { flex-direction: column; }
             .pilot-content { padding: 40px; }
-            .pilot-visual { height: 300px; border-left: none; border-top: 1px solid var(--border); }
+            .pilot-visual { height: 300px; border-left: none; border-top: 1px solid var(--glass-border); }
             h1 { font-size: 3.5rem; }
-        }
-
-        /* Bento Grid */
-        .benefits-section { padding: 120px 0; background: #000; }
-        .bento-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            grid-template-rows: repeat(2, auto);
-            gap: 24px;
-            margin-top: 60px;
-        }
-        .bento-item {
-            background: var(--glass);
-            border: 1px solid var(--border);
-            border-radius: 24px;
-            padding: 40px;
-            text-align: left;
-            transition: 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-        }
-        .bento-item:hover {
-            border-color: rgba(225, 0, 15, 0.3);
-            background: rgba(225, 0, 15, 0.02);
-            transform: translateY(-5px);
-        }
-        .bento-item h3 { font-size: 20px; font-weight: 700; margin-bottom: 12px; margin-top: 0; }
-        .bento-item p { font-size: 15px; color: var(--text-dim); line-height: 1.6; margin: 0; }
-        .bento-icon {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 12px;
-            color: var(--accent);
-            margin-bottom: 24px;
-            display: block;
-        }
-        .bento-wide { grid-column: span 2; }
-        .bento-tall { grid-row: span 2; }
-
-        @media (max-width: 1000px) {
             .bento-grid { grid-template-columns: repeat(2, 1fr); }
-            .bento-wide { grid-column: span 1; }
+            .bento-wide { grid-column: span 2; }
         }
+
         @media (max-width: 600px) {
             .bento-grid { grid-template-columns: 1fr; }
-            .bento-wide, .bento-tall { grid-column: span 1; grid-row: span 1; }
+            .bento-wide { grid-column: span 1; }
+            h1 { font-size: 2.5rem; }
         }
     </style>
 </head>
@@ -119,35 +283,58 @@
         <div class="container">
             <span class="section-label">Capabilities</span>
             <div class="bento-grid">
-                <div class="bento-item bento-wide">
-                    <span class="bento-icon">[ Foundation Model ]</span>
-                    <h3>The Language of Chemistry</h3>
-                    <p>DreaMS is a self-supervised transformer trained on 201 million mass spectra—the largest chemical dataset in existence. It doesn't just match patterns; it understands the universal syntax of molecules.</p>
+                <!-- Foundation Model -->
+                <div class="glass glass-interactive bento-item bento-wide">
+                    <span class="bento-icon">01 [ Foundation Model ]</span>
+                    <div>
+                        <h3>The Language of Chemistry</h3>
+                        <p>DreaMS is a self-supervised transformer trained on 201 million mass spectra—the largest chemical dataset in existence. It understands the universal syntax of molecules.</p>
+                    </div>
                 </div>
-                <div class="bento-item">
-                    <span class="bento-icon">[ Zero-Shot ID ]</span>
-                    <h3>Instant Unknowns</h3>
-                    <p>Identify novel compounds in seconds without reference standards. DreaMS maps your data to a global 3D atlas to resolve chemical "dark matter."</p>
+
+                <!-- Instant Unknowns -->
+                <div class="glass glass-interactive bento-item">
+                    <span class="bento-icon">02 [ Zero-Shot ID ]</span>
+                    <div>
+                        <h3>Instant Unknowns</h3>
+                        <p>Identify novel compounds in seconds without reference standards using our global 3D atlas.</p>
+                    </div>
                 </div>
-                <div class="bento-item">
-                    <span class="bento-icon">[ Peer Reviewed ]</span>
-                    <h3>Nature Validation</h3>
-                    <p>Our foundation model architecture was validated in <i>Nature Biotechnology</i> (May 2025), establishing a new benchmark for molecular intelligence.</p>
+
+                <!-- Nature Validation -->
+                <div class="glass glass-interactive bento-item">
+                    <span class="bento-icon">03 [ Peer Reviewed ]</span>
+                    <div>
+                        <h3>Nature Validation</h3>
+                        <p>Our architecture was validated in <i>Nature Biotechnology</i> (May 2025), setting a new benchmark.</p>
+                    </div>
                 </div>
-                <div class="bento-item">
-                    <span class="bento-icon">[ Interactive ]</span>
-                    <h3>3D Chemical Atlas</h3>
-                    <p>Navigate tens of thousands of proprietary molecules in a high-performance 3D environment. Spot clusters, trends, and outliers instantly.</p>
+
+                <!-- 3D Atlas -->
+                <div class="glass glass-interactive bento-item">
+                    <span class="bento-icon">04 [ Interactive ]</span>
+                    <div>
+                        <h3>3D Chemical Atlas</h3>
+                        <p>Navigate proprietary molecules in high-performance 3D. Spot clusters and trends instantly.</p>
+                    </div>
                 </div>
-                <div class="bento-item">
-                    <span class="bento-icon">[ Strategic ]</span>
-                    <h3>White Space Discovery</h3>
-                    <p>Infiltrate competitor datasets and overlay them on your own to identify untapped chemical territories and protect your IP.</p>
+
+                <!-- White Space -->
+                <div class="glass glass-interactive bento-item">
+                    <span class="bento-icon">05 [ Strategic ]</span>
+                    <div>
+                        <h3>White Space Discovery</h3>
+                        <p>Overlay competitor datasets to identify untapped chemical territories and protect IP.</p>
+                    </div>
                 </div>
-                <div class="bento-item bento-wide">
-                    <span class="bento-icon">[ R&D Efficiency ]</span>
-                    <h3>Digital Lab Acceleration</h3>
-                    <p>Transform your existing LC-MS fleet into an intelligent discovery engine. Cut reformulation cycles from months to days by navigating your proprietary formulation space in 3D.</p>
+
+                <!-- Digital Lab -->
+                <div class="glass glass-interactive bento-item bento-wide">
+                    <span class="bento-icon">06 [ R&D Efficiency ]</span>
+                    <div>
+                        <h3>Digital Lab Acceleration</h3>
+                        <p>Transform your existing LC-MS fleet into an intelligent discovery engine. Cut reformulation cycles from months to days by navigating your proprietary formulation space in 3D.</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -157,10 +344,10 @@
     <section class="pilot-section">
         <div class="container">
             <span class="section-label">Enterprise Pilots</span>
-            <div class="pilot-card">
+            <div class="glass glass-interactive glass-accent-red pilot-card">
                 <div class="pilot-content">
                     <h2>Henkel Adhesive Atlas</h2>
-                    <p>A specialized application of DreaMS intelligence mapping thousands of proprietary adhesive formulations into 3D space to accelerate reformulation and performance prediction.</p>
+                    <p>A specialized application of DreaMS intelligence mapping thousands of proprietary adhesive formulations into 3D space to accelerate reformulation.</p>
                     <a href="henkel_lab_demo.html" class="cta-text">Launch Pilot Demo &rarr;</a>
                 </div>
                 <div class="pilot-visual">
