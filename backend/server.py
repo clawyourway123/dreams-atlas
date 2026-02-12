@@ -291,11 +291,27 @@ def api_search(request: Request, id: str, k: int = 20, tenant_id: str = "default
 
     # Mock tenant-specific filtering (simulated)
     if tenant_id != "default":
-        # Simulate that some tenants only see a subset (e.g., even IDs)
-        results = [r for r in results if hash(f"{tenant_id}{r['id']}") % 2 == 0]
+        # Role-Based Access Control (RBAC) Logic
+        # Admin can see everything, Viewer only sees even IDs
+        user_role = request.headers.get("X-User-Role", "viewer")
+        if user_role == "viewer":
+            results = [r for r in results if hash(f"{tenant_id}{r['id']}") % 2 == 0]
+        logger.info(f"RBAC: Filtered results for role {user_role} (Tenant: {tenant_id})")
 
     search_cache.put(cache_key, results)
     return {"query": clean_id, "tenant": tenant_id, "results": results}
+
+@app.get("/api/auth/sso/callback")
+def sso_callback(token: str):
+    """Mock SAML/SSO callback for enterprise authentication."""
+    logger.info(f"SSO: Authenticated user with token {token[:10]}...")
+    return {
+        "status": "authenticated",
+        "user": "enterprise_user@client.com",
+        "tenant_id": "client_alpha",
+        "role": "admin",
+        "expires_in": 3600
+    }
 
 @app.post("/api/track")
 async def api_track(request: Request):
