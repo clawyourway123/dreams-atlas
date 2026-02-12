@@ -114,7 +114,7 @@ rate_limiter = RateLimiter(max_requests=30, window_seconds=60)
 # ---------------------------------------------------------------------------
 # Input Validation
 # ---------------------------------------------------------------------------
-_SAFE_ID_RE = re.compile(r"^[A-Za-z0-9_\-.:]{1,128}$")
+_SAFE_ID_RE = re.compile(r"^[A-Za-z0-9_\-.:, +()'\[\]]{1,256}$")
 
 
 def validate_search_id(raw: str) -> str:
@@ -151,16 +151,8 @@ def load_data():
         embeddings_path = PROJECT_ROOT / "embeddings_checkpoint.npy"
         atlas_path = PROJECT_ROOT / "atlas_data.json"
 
-        # Load vectors
-        if embeddings_path.exists():
-            vectors = np.load(str(embeddings_path)).astype("float32")
-            logger.info(f"Loaded {vectors.shape[0]} vectors ({vectors.shape[1]}D)")
-        else:
-            logger.warning("embeddings_checkpoint.npy not found — generating mock data")
-            np.random.seed(42)
-            vectors = np.random.rand(1000, 512).astype("float32")
-
-        # Load ID mapping
+        # Load ID mapping first so we know how many vectors to generate
+        n_items = 1000  # default fallback
         if atlas_path.exists():
             with open(atlas_path, "r") as f:
                 atlas_json = json.load(f)
@@ -168,9 +160,24 @@ def load_data():
                     str_id = item.get("id", f"ID_{i}")
                     id_map[i] = str_id
                     reverse_map[str_id] = i
+                n_items = len(atlas_json)
             logger.info(f"Loaded {len(id_map)} ID mappings from atlas_data.json")
         else:
             logger.warning("atlas_data.json not found — using numeric IDs")
+
+        # Load vectors
+        if embeddings_path.exists():
+            vectors = np.load(str(embeddings_path)).astype("float32")
+            logger.info(f"Loaded {vectors.shape[0]} vectors ({vectors.shape[1]}D)")
+        else:
+            logger.warning(
+                "embeddings_checkpoint.npy not found — generating %d mock vectors", n_items
+            )
+            np.random.seed(42)
+            vectors = np.random.rand(n_items, 512).astype("float32")
+
+        # If atlas wasn't loaded yet, build numeric IDs matching vector count
+        if not id_map:
             for i in range(vectors.shape[0]):
                 id_map[i] = f"ID_{i}"
                 reverse_map[f"ID_{i}"] = i
