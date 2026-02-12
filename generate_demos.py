@@ -100,7 +100,7 @@ template = """<!DOCTYPE html>
   </div>
 </div>
 
-<script src="atlas-viewer-lab.js"></script>
+<script src="atlas-viewer-lab.min.js"></script>
 
 </body>
 </html>
