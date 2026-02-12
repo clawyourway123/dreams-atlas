@@ -33,6 +33,10 @@ let labIndicesBuffer = null;
 let labCurrentSelectedId = null;
 let lastSearchResults = [];
 
+// Comparison Mode State
+let compareMode = false;
+let comparisonAnchor = null;
+
 // Minimal fallbacks so the lab viewer can run standalone without relying
 // on functions from the stable viewer file.
 if (typeof toggleSidebar !== 'function') {
@@ -175,7 +179,12 @@ function generateLabData() {
                 if (select) select.value = selectedId;
 
                 updateLabDetails(selectedId);
-                labHighlightSimilarFAISS(selectedId);
+                
+                if (compareMode && comparisonAnchor && selectedId !== comparisonAnchor.id) {
+                    runComparison(selectedId);
+                } else {
+                    labHighlightSimilarFAISS(selectedId);
+                }
             });
 
             populateLabDropdown(json);
@@ -440,6 +449,120 @@ function saveAnnotation() {
     
     alert("Annotation saved to Team Workspace!");
     trackEvent('save_annotation', { id: labCurrentSelectedId, length: note.length });
+}
+
+function toggleCompareMode() {
+    if (!labCurrentSelectedId) {
+        alert("Select a molecule first to start comparison.");
+        return;
+    }
+
+    if (!compareMode) {
+        // Enter compare mode
+        compareMode = true;
+        const idx = labIdToIdx.get(labCurrentSelectedId);
+        comparisonAnchor = labAtlasData[idx];
+        
+        // UI Feedback
+        const btn = document.getElementById('compareBtn');
+        if (btn) {
+            btn.textContent = "Cancel Compare";
+            btn.style.background = "#e1000f";
+            btn.style.color = "#fff";
+        }
+        
+        // Show comparison bar or hint
+        showComparisonHint(`Anchor: ${labCurrentSelectedId}. Select another molecule to compare.`);
+        trackEvent('compare_start', { anchor: labCurrentSelectedId });
+    } else {
+        // Exit compare mode
+        exitCompareMode();
+    }
+}
+
+function exitCompareMode() {
+    compareMode = false;
+    comparisonAnchor = null;
+    const btn = document.getElementById('compareBtn');
+    if (btn) {
+        btn.textContent = "Compare";
+        btn.style.background = "";
+        btn.style.color = "";
+    }
+    const hint = document.getElementById('comparison-hint');
+    if (hint) hint.style.display = 'none';
+    
+    const panel = document.getElementById('comparison-panel');
+    if (panel) panel.style.display = 'none';
+}
+
+function showComparisonHint(text) {
+    let hint = document.getElementById('comparison-hint');
+    if (!hint) {
+        hint = document.createElement('div');
+        hint.id = 'comparison-hint';
+        hint.style.cssText = "position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.8); color:white; padding:12px 24px; border-radius:99px; font-size:13px; z-index:1000; border:1px solid var(--accent); backdrop-filter:blur(8px);";
+        document.body.appendChild(hint);
+    }
+    hint.textContent = text;
+    hint.style.display = 'block';
+}
+
+function runComparison(id2) {
+    if (!comparisonAnchor) return;
+    const idx2 = labIdToIdx.get(id2);
+    if (idx2 === undefined) return;
+    const target = labAtlasData[idx2];
+    
+    // Calculate 3D distance
+    const dx = comparisonAnchor.x - target.x;
+    const dy = comparisonAnchor.y - target.y;
+    const dz = comparisonAnchor.z - target.z;
+    const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+    const similarity = (1.0 / (1.0 + dist)).toFixed(4);
+
+    trackEvent('compare_complete', { anchor: comparisonAnchor.id, target: id2, similarity });
+
+    // Show comparison panel
+    let panel = document.getElementById('comparison-panel');
+    if (!panel) {
+        panel = document.createElement('div');
+        panel.id = 'comparison-panel';
+        panel.className = 'glass';
+        panel.style.cssText = "position:fixed; bottom:80px; left:50%; transform:translateX(-50%); width:90%; max-width:600px; padding:24px; z-index:1000; border:1px solid var(--accent); display:grid; grid-template-columns:1fr 1fr; gap:20px; text-align:left;";
+        document.body.appendChild(panel);
+    }
+    
+    panel.innerHTML = `
+        <div style="grid-column: 1 / -1; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--glass-border); padding-bottom:12px; margin-bottom:12px;">
+            <h3 style="margin:0; font-size:16px;">Molecular Comparison</h3>
+            <div style="font-family:'JetBrains Mono'; color:var(--accent); font-weight:bold;">Similarity Index: ${similarity}</div>
+            <button onclick="exitCompareMode()" style="background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:18px;">&times;</button>
+        </div>
+        <div>
+            <div style="font-size:11px; color:var(--text-dim); margin-bottom:4px;">ANCHOR</div>
+            <div style="font-weight:bold; font-size:14px; margin-bottom:12px;">${comparisonAnchor.id}</div>
+            <div style="font-size:12px;">Cluster: ${comparisonAnchor.cluster}</div>
+            <div style="font-size:12px;">X: ${comparisonAnchor.x.toFixed(2)}</div>
+            <div style="font-size:12px;">Y: ${comparisonAnchor.y.toFixed(2)}</div>
+            <div style="font-size:12px;">Z: ${comparisonAnchor.z.toFixed(2)}</div>
+        </div>
+        <div style="border-left:1px solid var(--glass-border); padding-left:20px;">
+            <div style="font-size:11px; color:var(--text-dim); margin-bottom:4px;">TARGET</div>
+            <div style="font-weight:bold; font-size:14px; margin-bottom:12px;">${target.id}</div>
+            <div style="font-size:12px;">Cluster: ${target.cluster}</div>
+            <div style="font-size:12px;">X: ${target.x.toFixed(2)}</div>
+            <div style="font-size:12px;">Y: ${target.y.toFixed(2)}</div>
+            <div style="font-size:12px;">Z: ${target.z.toFixed(2)}</div>
+        </div>
+        <div style="grid-column: 1 / -1; margin-top:12px; padding-top:12px; border-top:1px solid var(--glass-border); font-size:11px; color:var(--text-dim);">
+            Spatial analysis performed via DreaMS Foundation Model manifold (v2.4).
+        </div>
+    `;
+    panel.style.display = 'grid';
+    
+    const hint = document.getElementById('comparison-hint');
+    if (hint) hint.style.display = 'none';
 }
 
 // Handle incoming share links

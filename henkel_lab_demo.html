@@ -92,6 +92,7 @@
 
     <div class="btn-group">
         <button class="btn" onclick="exportResultsAsCSV()">Export CSV</button>
+        <button class="btn" id="compareBtn" onclick="toggleCompareMode()" style="background: var(--panel-bg); border: 1px solid var(--border-color); color: var(--text-main);">Compare</button>
         <button class="btn" style="background: var(--panel-bg); border: 1px solid var(--border-color); color: var(--text-main);" onclick="shareView()">Share View</button>
     </div>
 
@@ -104,7 +105,6 @@
         <h2>What you're seeing</h2>
         <ul style="font-size: 12px; color: var(--text-dim); padding-left: 15px; line-height: 1.6;">
             <li style="margin-bottom: 8px;"><strong style="color:var(--header-text)">DreaMS Atlas (Lab):</strong> High-fidelity manifold of Henkel's proprietary chemical space.</li>
-            <li style="margin-bottom: 8px;"><strong style="color:var(--header-text)">Automated R&D Reporting:</strong> Instant generation of PDF/CSV dossiers for patent filings.</li>
             <li style="margin-bottom: 8px;"><strong style="color:var(--header-text)">FAISS Similarity:</strong> Real-time neighborhood ranking via the DreaMS foundation model.</li>
             <li style="margin-bottom: 8px;"><strong style="color:var(--header-text)">Strategic Insight:</strong> Built for R&D leaders to identify "<span class="tooltip" data-tooltip="Unexplored regions of chemical space where new, patentable molecules may exist.">white space</span>" for IP protection.</li>
         </ul>

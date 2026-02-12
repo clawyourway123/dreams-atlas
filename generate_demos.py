@@ -95,7 +95,13 @@ template = """<!DOCTYPE html>
 
     <div class="btn-group">
         <button class="btn" onclick="exportResultsAsCSV()">Export CSV</button>
+        <button class="btn" id="compareBtn" onclick="toggleCompareMode()" style="background: var(--panel-bg); border: 1px solid var(--border-color); color: var(--text-main);">Compare</button>
         <button class="btn" style="background: var(--panel-bg); border: 1px solid var(--border-color); color: var(--text-main);" onclick="shareView()">Share View</button>
+    </div>
+
+    <div class="btn-group" style="margin-top: 8px;">
+        <button class="btn" onclick="calculateCoverage()" style="background: #1a1a1a; border-color: #333;">Coverage Map</button>
+        <button class="btn" onclick="exportReportPDF()" style="background: #1a1a1a; border-color: #333;">Generate Report</button>
     </div>
 
     <div style="margin-top: 30px; border-top: 1px solid var(--border-color); padding-top: 20px;">
@@ -123,6 +129,11 @@ template = """<!DOCTYPE html>
       <div style="margin-top:8px; font-size:11px; color:var(--text-dim);">
           Most similar (top 10):
           <ol id="detail-neighbors" style="margin:4px 0 0; padding-left:16px; max-height:160px; overflow-y:auto; color:var(--text-main)"></ol>
+      </div>
+      <div style="margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 12px;">
+          <label style="font-size: 11px; color: var(--text-dim); display: block; margin-bottom: 5px;">R&D Annotation</label>
+          <textarea id="annotationBox" style="width: 100%; background: var(--bg-body); border: 1px solid var(--border-color); color: var(--text-main); font-size: 11px; border-radius: 4px; padding: 6px; height: 40px; resize: none;" placeholder="Add team note..."></textarea>
+          <button class="btn" onclick="saveAnnotation()" style="margin-top: 5px; width: 100%; font-size: 10px; padding: 6px;">Save Note</button>
       </div>
   </div>
 </div>
