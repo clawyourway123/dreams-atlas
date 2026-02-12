@@ -339,6 +339,24 @@ def eln_export(id: str, format: str = "benchling"):
     return metadata
 
 # ---------------------------------------------------------------------------
+# Phase 16.5: LIMS Ingestion
+# ---------------------------------------------------------------------------
+@app.get("/api/lims/ingest")
+def lims_ingest(smiles: str):
+    """SMILES-to-Spectrum mapping for LIMS ingestion (Mock)."""
+    # Simple hash-based mapping for demo
+    mock_id = f"MOL_{abs(hash(smiles)) % 5000}"
+    query_idx = reverse_map.get(mock_id, 0)
+    str_id = id_map.get(query_idx, "Unknown")
+    
+    return {
+        "smiles": smiles,
+        "matched_spectrum_id": str_id,
+        "confidence": 0.89,
+        "status": "LIMS_READY"
+    }
+
+# ---------------------------------------------------------------------------
 # Static Files
 # ---------------------------------------------------------------------------
 @app.get("/")
