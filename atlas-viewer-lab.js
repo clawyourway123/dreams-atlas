@@ -37,6 +37,35 @@ let lastSearchResults = [];
 let compareMode = false;
 let comparisonAnchor = null;
 
+// RDKit-JS Integration
+let rdkitModule = null;
+if (window.initRDKitModule) {
+    window.initRDKitModule().then(instance => {
+        rdkitModule = instance;
+        console.log("RDKit version: " + rdkitModule.version());
+    }).catch(err => console.error("RDKit init error", err));
+}
+
+async function drawMolecule(smiles) {
+    if (!rdkitModule || !smiles) return;
+    const container = document.getElementById('molecule-canvas-container');
+    const wrapper = document.getElementById('structure-container');
+    if (!container || !wrapper) return;
+
+    wrapper.style.display = 'flex';
+    container.innerHTML = '';
+    
+    try {
+        const mol = rdkitModule.get_mol(smiles);
+        const svg = mol.get_svg();
+        container.innerHTML = svg;
+        mol.delete();
+    } catch (e) {
+        console.error("RDKit draw error", e);
+        wrapper.style.display = 'none';
+    }
+}
+
 // Minimal fallbacks so the lab viewer can run standalone without relying
 // on functions from the stable viewer file.
 if (typeof toggleSidebar !== 'function') {
@@ -242,6 +271,17 @@ function updateLabDetails(spectrumId) {
     if (idEl) idEl.textContent = anchor.id;
     if (clEl) clEl.textContent = anchor.cluster;
     if (xyzEl) xyzEl.textContent = `${anchor.x.toFixed(1)}, ${anchor.y.toFixed(1)}, ${anchor.z.toFixed(1)}`;
+
+    // Phase 16.5: Fetch SMILES and draw structure
+    try {
+        const res = await fetch(`${FAISS_BASE_URL}/api/molecule/smiles?id=${encodeURIComponent(spectrumId)}`);
+        const data = await res.json();
+        if (data.smiles) {
+            drawMolecule(data.smiles);
+        }
+    } catch (e) {
+        console.warn("SMILES fetch error", e);
+    }
 }
 
 async function labHighlightSimilarFAISS(id) {

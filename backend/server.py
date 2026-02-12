@@ -306,8 +306,26 @@ async def api_track(request: Request):
     except: return {"status": "err"}
 
 # ---------------------------------------------------------------------------
-# Phase 16.5: Interoperability logic
+# Phase 16: Interoperability logic
 # ---------------------------------------------------------------------------
+@app.get("/api/eln/context")
+def eln_context(id: str, experiment_type: str = "similarity_review"):
+    """Generate 'Chemical Context' injection for automated experiment log metadata."""
+    clean_id = validate_search_id(id)
+    if clean_id not in reverse_map:
+        raise HTTPException(status_code=404, detail="Compound not found")
+    
+    # In a real app, we'd fetch actual metadata and neighborhood stats
+    context = {
+        "molecule_id": clean_id,
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
+        "experiment": experiment_type,
+        "atlas_neighborhood": "Cluster_0", # Mock
+        "recommended_action": "Verify spectrum similarity with Scytonemin reference.",
+        "log_entry": f"DREAM-CONTEXT: [{clean_id}] Analysis in DreaMS Atlas. Part of neighborhood Cluster_0. Recommended for further spectral deconvolution."
+    }
+    return context
+
 @app.get("/api/eln/export")
 def eln_export(id: str, format: str = "benchling"):
     """Export compound metadata in ELN-friendly formats."""
@@ -355,6 +373,31 @@ def lims_ingest(smiles: str):
         "confidence": 0.89,
         "status": "LIMS_READY"
     }
+
+@app.post("/api/dotmatics/sync")
+def dotmatics_sync(id: str, payload: dict = None):
+    """Mock Dotmatics integration hook."""
+    clean_id = validate_search_id(id)
+    # Simulate pushing data to Dotmatics
+    logger.info(f"DOTMATICS SYNC: Pushing {clean_id} to Dotmatics gateway.")
+    return {
+        "status": "success",
+        "molecule_id": clean_id,
+        "dotmatics_record_id": f"DX-{int(time.time())}",
+        "synced_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    }
+
+@app.get("/api/molecule/smiles")
+def get_smiles(id: str):
+    """Return mock SMILES for a given compound ID."""
+    clean_id = validate_search_id(id)
+    # Mock SMILES mapping
+    mock_smiles = {
+        "Scytonemin M+H": "C1=CC=C2C(=C1)C3=C(N2)C(=O)C(=C3)C4=CC5=C(C=C4)NC6=CC=CC=C56",
+        "Salinisporamide A M+H": "CC1C(C(=O)N1C(CC2=CC=CC=C2)C(=O)O)C(C)O",
+        "Hectochlorin M+H": "CCCCCCCCCCC(C(CC(=O)NC(C(C)OC(=O)C)C(=O)O)O)Cl"
+    }
+    return {"id": clean_id, "smiles": mock_smiles.get(clean_id, "CN1C=NC2=C1C(=O)N(C(=O)N2C)C")} # Caffeine fallback
 
 # ---------------------------------------------------------------------------
 # Static Files

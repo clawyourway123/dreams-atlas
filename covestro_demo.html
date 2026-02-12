@@ -13,6 +13,7 @@
         })();
     </script>
     <script src="https://cdn.plot.ly/plotly-2.35.0.min.js"></script>
+    <script src="https://unpkg.com/@rdkit/rdkit/dist/RDKit_minimal.js"></script>
     <link rel="stylesheet" href="atlas.css">
     <style>
       .sidebar.collapsed {
@@ -122,6 +123,9 @@
       </div>
       <div style="margin-top:5px; font-size:11px; font-family:monospace; color:var(--text-dim);">
           XYZ: <span id="detail-xyz"></span>
+      </div>
+      <div id="structure-container" style="margin-top:10px; height: 140px; background: white; border-radius: 8px; display: none; align-items: center; justify-content: center; overflow: hidden; border: 1px solid var(--border-color);">
+          <div id="molecule-canvas-container" style="width: 100%; height: 100%;"></div>
       </div>
       <div style="margin-top:8px; font-size:11px; color:var(--text-dim);">
           Most similar (top 10):
