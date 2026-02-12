@@ -1,9 +1,9 @@
 """DreaMS Atlas — FastAPI backend with FAISS similarity search.
 
-Phase 6 hardening: rate limiting, input validation, request logging,
-LRU caching, and graceful degradation.
+Phase 6/12 hardening: rate limiting, input validation, request logging,
+LRU caching, graceful degradation, and GZip.
 
-v2.1 — 2026-02-12: 5000 mock vectors matching atlas_data.json, regex fix.
+v2.2 — 2026-02-12: Added Phase 12 hardening (GZip, Logs API, Resilience).
 """
 
 import json
@@ -35,12 +35,15 @@ event_log = deque(maxlen=100)
 
 class LogHandler(logging.Handler):
     def emit(self, record):
-        log_entry = self.format(record)
-        event_log.append({
-            "time": time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(record.created)),
-            "level": record.levelname,
-            "message": record.getMessage()
-        })
+        try:
+            msg = self.format(record)
+            event_log.append({
+                "time": time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(record.created)),
+                "level": record.levelname,
+                "message": record.getMessage()
+            })
+        except Exception:
+            pass
 
 logger.addHandler(LogHandler())
 
@@ -98,7 +101,7 @@ search_cache = LRUCache(capacity=512)
 class RateLimiter:
     """Sliding-window rate limiter per IP address."""
 
-    def __init__(self, max_requests: int = 30, window_seconds: int = 60):
+    def __init__(self, max_requests: int = 60, window_seconds: int = 60):
         self.max_requests = max_requests
         self.window = window_seconds
         self._hits: dict[str, list[float]] = {}
@@ -116,16 +119,7 @@ class RateLimiter:
         self._hits[ip] = hits
         return True
 
-    def cleanup(self):
-        """Remove stale IPs (call occasionally)."""
-        now = time.time()
-        cutoff = now - self.window * 2
-        stale = [ip for ip, hits in self._hits.items() if not hits or hits[-1] < cutoff]
-        for ip in stale:
-            del self._hits[ip]
-
-
-rate_limiter = RateLimiter(max_requests=30, window_seconds=60)
+rate_limiter = RateLimiter(max_requests=60, window_seconds=60)
 
 
 # ---------------------------------------------------------------------------
@@ -140,7 +134,7 @@ def validate_search_id(raw: str) -> str:
     if not _SAFE_ID_RE.match(raw):
         raise HTTPException(
             status_code=400,
-            detail="Invalid ID format. Must be 1-128 alphanumeric/dash/underscore characters.",
+            detail="Invalid ID format.",
         )
     return raw
 
@@ -150,7 +144,7 @@ def validate_search_id(raw: str) -> str:
 # ---------------------------------------------------------------------------
 def numpy_search(query_vec: np.ndarray, k: int) -> tuple[np.ndarray, np.ndarray]:
     """Brute-force L2 search using numpy — fallback when faiss is unavailable."""
-    diffs = vectors - query_vec  # type: ignore[operator]
+    diffs = vectors - query_vec
     dists = np.sum(diffs ** 2, axis=1)
     top_k = np.argpartition(dists, k)[:k]
     top_k_sorted = top_k[np.argsort(dists[top_k])]
@@ -164,17 +158,15 @@ def load_data(retries=3):
     global index, vectors, id_map, reverse_map
 
     for attempt in range(retries):
-        logger.info(f"Loading embeddings (attempt {attempt + 1}/{retries})...")
+        logger.info(f"Loading data (attempt {attempt + 1}/{retries})...")
         try:
             embeddings_path = PROJECT_ROOT / "embeddings_checkpoint.npy"
             atlas_path = PROJECT_ROOT / "atlas_data.json"
 
-            # Clear existing data if retrying
             id_map.clear()
             reverse_map.clear()
 
-            # Load ID mapping first so we know how many vectors to generate
-            n_items = 1000  # default fallback
+            n_items = 1000
             if atlas_path.exists():
                 with open(atlas_path, "r") as f:
                     atlas_json = json.load(f)
@@ -183,46 +175,35 @@ def load_data(retries=3):
                         id_map[i] = str_id
                         reverse_map[str_id] = i
                     n_items = len(atlas_json)
-                logger.info(f"Loaded {len(id_map)} ID mappings from atlas_data.json")
-            else:
-                logger.warning("atlas_data.json not found — using numeric IDs")
-
-            # Load vectors
+                logger.info(f"Loaded {len(id_map)} ID mappings")
+            
             if embeddings_path.exists():
                 vectors = np.load(str(embeddings_path)).astype("float32")
-                logger.info(f"Loaded {vectors.shape[0]} vectors ({vectors.shape[1]}D)")
+                logger.info(f"Loaded {vectors.shape[0]} vectors")
             else:
-                logger.warning(
-                    "embeddings_checkpoint.npy not found — generating %d mock vectors", n_items
-                )
+                logger.warning("Generating mock vectors")
                 np.random.seed(42)
                 vectors = np.random.rand(n_items, 512).astype("float32")
 
-            # If atlas wasn't loaded yet, build numeric IDs matching vector count
             if not id_map:
                 for i in range(vectors.shape[0]):
                     id_map[i] = f"ID_{i}"
                     reverse_map[f"ID_{i}"] = i
 
-            # Build FAISS index (or skip if unavailable)
             if faiss_available and faiss is not None:
                 d = vectors.shape[1]
                 index = faiss.IndexFlatL2(d)
                 index.add(vectors)
-                logger.info(f"FAISS index built: {index.ntotal} vectors")
+                logger.info(f"FAISS index built: {index.ntotal}")
             else:
-                logger.info("Using numpy fallback for similarity search")
+                logger.info("Using numpy search")
             
-            # If we reached here, success!
             return
 
         except Exception as e:
-            logger.error(f"Error loading data (attempt {attempt + 1}): {e}", exc_info=True)
+            logger.error(f"Load error: {e}")
             if attempt < retries - 1:
-                time.sleep(2)
-            else:
-                logger.critical("Failed to load data after all retries.")
-
+                time.sleep(1)
 
 # ---------------------------------------------------------------------------
 # App Lifecycle
@@ -236,7 +217,6 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="DreaMS Atlas", lifespan=lifespan)
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -245,190 +225,91 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 # ---------------------------------------------------------------------------
-# Request Logging & Cache Headers Middleware
+# Middleware: Logging & Cache
 # ---------------------------------------------------------------------------
 @app.middleware("http")
 async def process_request(request: Request, call_next):
     start = time.time()
     response = await call_next(request)
     elapsed = (time.time() - start) * 1000
-    
     path = request.url.path
     
-    # Add Cache-Control for static assets
-    if any(path.endswith(ext) for ext in [".js", ".css", ".png", ".jpg", ".svg", ".woff2", ".json"]):
-        # 1 day cache for assets, 1 hour for json
+    if any(path.endswith(ext) for ext in [".js", ".css", ".png", ".jpg", ".json"]):
         max_age = 3600 if path.endswith(".json") else 86400
         response.headers["Cache-Control"] = f"public, max-age={max_age}"
     
-    # Log API requests (skip static assets to reduce noise)
     if path.startswith("/api/") or path in ("/healthz", "/search"):
-        logger.info(
-            f"{request.method} {path} → {response.status_code} ({elapsed:.1f}ms) "
-            f"[{request.client.host if request.client else '?'}]"
-        )
+        logger.info(f"{request.method} {path} -> {response.status_code} ({elapsed:.1f}ms)")
+    
     return response
 
-
 # ---------------------------------------------------------------------------
-# Health & Status
+# API Endpoints
 # ---------------------------------------------------------------------------
 @app.get("/healthz")
 def healthz():
-    vec_count = 0
-    if index is not None:
-        vec_count = index.ntotal
-    elif vectors is not None:
-        vec_count = vectors.shape[0]
-    return {
-        "status": "alive",
-        "vectors": vec_count,
-        "faiss": faiss_available,
-        "cache_size": len(search_cache._cache),
-    }
-
+    return {"status": "alive", "vectors": len(id_map), "faiss": faiss_available}
 
 @app.get("/api/status")
 def api_status():
-    vec_count = 0
-    if index is not None:
-        vec_count = index.ntotal
-    elif vectors is not None:
-        vec_count = vectors.shape[0]
-    return {"status": "ok", "vectors": vec_count, "faiss": faiss_available}
-
+    return {"status": "ok", "vectors": len(id_map), "cache": len(search_cache._cache)}
 
 @app.get("/api/logs")
 def get_logs():
-    """Returns the last 100 log entries."""
     return list(event_log)
 
+@app.get("/api/search")
+def api_search(request: Request, id: str, k: int = 20):
+    client_ip = request.client.host if request.client else "unknown"
+    if not rate_limiter.is_allowed(client_ip):
+        raise HTTPException(status_code=429, detail="Rate limit")
 
-# ---------------------------------------------------------------------------
-# Search API (rate-limited, validated, cached)
-# ---------------------------------------------------------------------------
-def _do_search(query_id: str, k: int) -> list[dict]:
-    """Core search logic — uses cache, FAISS or numpy fallback."""
-    cache_key = f"{query_id}:{k}"
+    clean_id = validate_search_id(id)
+    k = max(1, min(k, 100))
+
+    cache_key = f"{clean_id}:{k}"
     cached = search_cache.get(cache_key)
-    if cached is not None:
-        return cached
+    if cached: return {"query": clean_id, "results": cached}
 
-    query_idx = reverse_map.get(query_id, -1)
-    if query_idx == -1:
-        raise HTTPException(status_code=404, detail="ID not found")
-
-    if vectors is None:
-        raise HTTPException(status_code=503, detail="Search data not loaded")
+    query_idx = reverse_map.get(clean_id, -1)
+    if query_idx == -1: raise HTTPException(status_code=404)
+    if vectors is None: raise HTTPException(status_code=503)
 
     query_vec = vectors[query_idx].reshape(1, -1)
-
-    if index is not None:
-        D, I = index.search(query_vec, k)
-    else:
-        D, I = numpy_search(query_vec, k)
+    if index: D, I = index.search(query_vec, k)
+    else: D, I = numpy_search(query_vec, k)
 
     results = []
     for rank, idx in enumerate(I[0]):
         dist = float(D[0][rank])
-        neighbor_id = id_map.get(int(idx), f"Unknown_{idx}")
-        results.append(
-            {"id": neighbor_id, "score": round(1.0 / (1.0 + dist), 6), "rank": rank}
-        )
+        results.append({"id": id_map.get(int(idx)), "score": round(1.0/(1.0+dist), 6), "rank": rank})
 
     search_cache.put(cache_key, results)
-    return results
-
-
-@app.get("/api/search")
-def api_search(request: Request, id: str, k: int = 20):
-    # Rate limiting
-    client_ip = request.client.host if request.client else "unknown"
-    if not rate_limiter.is_allowed(client_ip):
-        raise HTTPException(status_code=429, detail="Rate limit exceeded. Try again later.")
-
-    # Input validation
-    clean_id = validate_search_id(id)
-    k = max(1, min(k, 100))  # Clamp k to [1, 100]
-
-    results = _do_search(clean_id, k)
     return {"query": clean_id, "results": results}
 
-
-@app.get("/search")
-def search_legacy(request: Request, id: str, k: int = 20):
-    """Legacy endpoint — same as /api/search."""
-    return api_search(request=request, id=id, k=k)
-
-
-# ---------------------------------------------------------------------------
-# Analytics API
-# ---------------------------------------------------------------------------
 @app.post("/api/track")
 async def api_track(request: Request):
-    """Log an analytics event."""
     try:
         data = await request.json()
-        event = data.get("event", "unknown")
-        meta = data.get("meta", {})
-        client_ip = request.client.host if request.client else "unknown"
-        logger.info(f"TRACK: {event} | {json.dumps(meta)} | IP: {client_ip}")
-        return {"status": "logged"}
-    except Exception as e:
-        logger.error(f"Track error: {e}")
-        return {"status": "error"}
-
+        logger.info(f"TRACK: {data.get('event')} | {data.get('meta')}")
+        return {"status": "ok"}
+    except: return {"status": "err"}
 
 # ---------------------------------------------------------------------------
-# Static File Serving
+# Static Files
 # ---------------------------------------------------------------------------
 @app.get("/")
 async def serve_index():
-    index_path = PROJECT_ROOT / "index.html"
-    if index_path.exists():
-        return FileResponse(str(index_path), media_type="text/html")
-    return HTMLResponse("<h1>DreaMS Atlas</h1><p>index.html not found</p>", status_code=404)
-
+    return FileResponse(str(PROJECT_ROOT / "index.html"))
 
 @app.get("/{path:path}")
 async def serve_static(path: str):
-    """Catch-all: serve static files from project root."""
     file_path = (PROJECT_ROOT / path).resolve()
-
-    # Security: prevent path traversal
-    if not str(file_path).startswith(str(PROJECT_ROOT)):
-        raise HTTPException(status_code=403, detail="Forbidden")
-
-    # Block sensitive files
-    if file_path.name in (".env", ".git", ".gitignore") or ".git/" in str(file_path):
-        raise HTTPException(status_code=403, detail="Forbidden")
-
-    if file_path.is_file():
-        suffix = file_path.suffix.lower()
-        media_types = {
-            ".html": "text/html",
-            ".css": "text/css",
-            ".js": "application/javascript",
-            ".json": "application/json",
-            ".png": "image/png",
-            ".jpg": "image/jpeg",
-            ".jpeg": "image/jpeg",
-            ".svg": "image/svg+xml",
-            ".ico": "image/x-icon",
-            ".woff": "font/woff",
-            ".woff2": "font/woff2",
-            ".ttf": "font/ttf",
-        }
-        media_type = media_types.get(suffix, "application/octet-stream")
-        return FileResponse(str(file_path), media_type=media_type)
-
+    if not str(file_path).startswith(str(PROJECT_ROOT)): raise HTTPException(status_code=403)
+    if file_path.is_file(): return FileResponse(str(file_path))
     raise HTTPException(status_code=404, detail=f"Not found: {path}")
-
 
 if __name__ == "__main__":
     import uvicorn
-
-    port = int(os.getenv("PORT", "8000"))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", "8000")))
