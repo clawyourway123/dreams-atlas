@@ -158,10 +158,19 @@ function generateData() {
                     setTimeout(() => Plotly.Plots.resize('scatter3d'), 100);
                 });
 
-            // TEMP: Disable all plot click behavior to guarantee no neighbor search
-            // is ever triggered from clicking a molecule. Selection happens via sidebar only.
+            // Enable plot click behavior
             document.getElementById('scatter3d').on('plotly_click', function(data){
-                return; // no-op on click
+                if (!data || !data.points || !data.points.length) return;
+                const pt = data.points[0];
+                const selectedId = (pt.curveNumber === 0 && ids[pt.pointNumber]) ? ids[pt.pointNumber] : pt.text;
+                if (!selectedId) return;
+                currentSelectedId = selectedId;
+
+                const select = document.getElementById('specSelect');
+                if (select) select.value = selectedId;
+
+                updateDetailsPanel(selectedId);
+                highlightSimilar(selectedId);
             });
 
             populateSpectrumDropdown(json);
@@ -198,8 +207,52 @@ async function highlightSimilar(specificId) {
     }
     if (!idToUse) return;
 
-    // Just update the details panel; do NOT run similarity or restyle the plot.
     updateDetailsPanel(idToUse);
+
+    const anchorIdx = idToIdx.get(idToUse);
+    if (anchorIdx === undefined) return;
+    const anchor = atlasData[anchorIdx];
+    const ax = anchor.x, ay = anchor.y, az = anchor.z;
+
+    // Calculate distances (local 3D)
+    for (let i = 0; i < atlasData.length; i++) {
+        const d = atlasData[i];
+        const dx = d.x - ax, dy = d.y - ay, dz = d.z - az;
+        distsBuffer[i] = dx*dx + dy*dy + dz*dz;
+        indicesBuffer[i] = i;
+    }
+
+    const arr = Array.from(indicesBuffer);
+    arr.sort((a, b) => distsBuffer[a] - distsBuffer[b]);
+    const topIndices = arr.slice(0, 20);
+
+    const hX = [], hY = [], hZ = [], hText = [], hColor = [], hSize = [];
+    const neighborList = [];
+
+    for (let i = 0; i < topIndices.length; i++) {
+        const idx = topIndices[i];
+        const d = atlasData[idx];
+        hX.push(d.x); hY.push(d.y); hZ.push(d.z); hText.push(d.id);
+        neighborList.push(d.id);
+        if (i === 0) { hColor.push('#ffffff'); hSize.push(12); }
+        else { hColor.push('#ff4b5c'); hSize.push(6); }
+    }
+
+    // Update neighbor list in details panel
+    const listEl = document.getElementById('detail-neighbors');
+    if (listEl) {
+        listEl.innerHTML = '';
+        for (let i = 0; i < Math.min(10, neighborList.length); i++) {
+            const li = document.createElement('li');
+            li.textContent = neighborList[i];
+            listEl.appendChild(li);
+        }
+    }
+
+    Plotly.restyle('scatter3d', {
+        x: [hX], y: [hY], z: [hZ], text: [hText],
+        'marker.color': [hColor], 'marker.size': [hSize]
+    }, [1]);
 }
 
 

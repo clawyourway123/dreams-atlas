@@ -3,29 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DreaMS Lab | Molecular Intelligence for Enterprise Discovery</title>
-    <script>
-        // Prevent flash of wrong theme on load
-        (function() {
-            var saved = localStorage.getItem('dreams-theme');
-            if (!saved) saved = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-theme', saved);
-        })();
-    </script>
+    <title>Dreams Lab - Molecular Intelligence</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <style>
-        :root, [data-theme="dark"] {
+        :root {
             --accent: #e1000f;
             --accent-hover: #ff1a2b;
             --bg-deep: #0a0a0a;
-            --bg-body: #000;
-            --bg-body-gradient: radial-gradient(circle at 50% 0%, #1a1a1a 0%, #000 60%);
             --text-main: #ffffff;
             --text-dim: #a1a1aa;
-            --hero-gradient-from: #fff;
-            --hero-gradient-to: #a1a1aa;
             
             /* Glass System */
             --glass-surface: rgba(255, 255, 255, 0.03);
@@ -33,66 +21,32 @@
             --glass-highlight: rgba(255, 255, 255, 0.15);
             --glass-blur: 16px;
             
-            /* Shadows */
+            /* Stripe-inspired Shadows */
             --shadow-sm: 0 2px 4px rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);
             --shadow-md: 0 12px 24px -6px rgba(0,0,0,0.5), 0 4px 8px -2px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1);
             --shadow-lg: 0 24px 48px -12px rgba(0,0,0,0.7), 0 12px 24px -6px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
             --shadow-red: 0 20px 40px -10px rgba(225, 0, 15, 0.15), inset 0 0 20px rgba(225, 0, 15, 0.05);
 
-            /* Point cloud */
-            --cloud-opacity: 0.4;
-            --vignette-color: #000;
-            --footer-border: rgba(255,255,255,0.05);
-
             /* Animations */
             --ease-out-quart: cubic-bezier(0.165, 0.84, 0.44, 1);
         }
 
-        [data-theme="light"] {
-            --accent: #c5000d;
-            --accent-hover: #e1000f;
-            --bg-deep: #f5f5f7;
-            --bg-body: #ffffff;
-            --bg-body-gradient: radial-gradient(circle at 50% 0%, #f0f0f5 0%, #fff 60%);
-            --text-main: #1d1d1f;
-            --text-dim: #6e6e73;
-            --hero-gradient-from: #1d1d1f;
-            --hero-gradient-to: #6e6e73;
-
-            --glass-surface: rgba(0, 0, 0, 0.02);
-            --glass-border: rgba(0, 0, 0, 0.08);
-            --glass-highlight: rgba(0, 0, 0, 0.06);
-            --glass-blur: 20px;
-
-            --shadow-sm: 0 2px 6px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-            --shadow-md: 0 8px 20px -4px rgba(0,0,0,0.1), 0 4px 8px -2px rgba(0,0,0,0.06);
-            --shadow-lg: 0 20px 40px -8px rgba(0,0,0,0.15), 0 8px 16px -4px rgba(0,0,0,0.08);
-            --shadow-red: 0 16px 32px -8px rgba(225, 0, 15, 0.12);
-
-            --cloud-opacity: 0.15;
-            --vignette-color: #fff;
-            --footer-border: rgba(0,0,0,0.06);
-        }
-
         @keyframes spin-slow { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        @keyframes fade-in { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
         body { 
             margin: 0; 
             font-family: 'Inter', sans-serif; 
-            background-color: var(--bg-body);
-            background-image: var(--bg-body-gradient);
+            background-color: #000;
+            background-image: 
+                radial-gradient(circle at 50% 0%, #1a1a1a 0%, #000 60%),
+                url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
             color: var(--text-main); 
             text-align: center; 
             scroll-behavior: smooth;
-            -webkit-font-smoothing: antialiased;
-            overflow-x: hidden;
-            transition: background-color 0.4s ease, color 0.4s ease;
         }
 
-        .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 10; }
+        .container { max-width: 1100px; margin: 0 auto; padding: 0 20px; position: relative; z-index: 10; }
         
-        /* Utility: Glass Engine */
         .glass {
             background: var(--glass-surface);
             backdrop-filter: blur(var(--glass-blur));
@@ -102,708 +56,94 @@
             border-radius: 24px;
             position: relative;
             overflow: hidden;
-            transition: transform 0.4s var(--ease-out-quart), box-shadow 0.4s var(--ease-out-quart), border-color 0.4s ease, opacity 0.6s ease, transform 0.6s var(--ease-out-quart);
+            transition: transform 0.4s var(--ease-out-quart), box-shadow 0.4s var(--ease-out-quart), border-color 0.4s ease;
         }
-
-        .reveal {
-            opacity: 0;
-            transform: translateY(30px);
-        }
-
-        .reveal.visible {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        .glass::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0;
-            height: 1px;
-            background: linear-gradient(90deg, transparent 0%, var(--glass-highlight) 50%, transparent 100%);
-            opacity: 0.5;
-            pointer-events: none;
-        }
-
-        /* Theme Toggle Button */
-        .theme-toggle {
-            position: fixed;
-            top: 24px;
-            right: 24px;
-            z-index: 1000;
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            border: 1px solid var(--glass-border);
-            background: var(--glass-surface);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            transition: all 0.3s var(--ease-out-quart);
-            box-shadow: var(--shadow-sm);
-            color: var(--text-main);
-        }
-        .theme-toggle:hover {
-            transform: scale(1.1);
-            border-color: var(--glass-highlight);
-            box-shadow: var(--shadow-md);
-        }
-        
-        .nav-actions {
-            position: fixed;
-            top: 24px;
-            right: 24px;
-            z-index: 1000;
-            display: flex;
-            gap: 12px;
-            align-items: center;
-        }
-
-        .client-login {
-            padding: 10px 20px;
-            font-size: 13px;
-            font-weight: 600;
-            background: var(--glass-surface);
-            color: var(--text-main);
-            border: 1px solid var(--glass-border);
-            border-radius: 99px;
-            cursor: pointer;
-            text-decoration: none;
-            transition: all 0.3s var(--ease-out-quart);
-            backdrop-filter: blur(12px);
-            font-family: 'JetBrains Mono', monospace;
-        }
-
-        .client-login:hover {
-            background: var(--glass-highlight);
-            border-color: var(--glass-highlight);
-            transform: translateY(-2px);
-        }
-
-        .theme-toggle {
-            position: relative;
-            top: 0; right: 0;
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            border: 1px solid var(--glass-border);
-            background: var(--glass-surface);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            transition: all 0.3s var(--ease-out-quart);
-            box-shadow: var(--shadow-sm);
-            color: var(--text-main);
-        }
-
-        /* Modal System */
-        .modal-overlay {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.8);
-            backdrop-filter: blur(8px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 2000;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s ease;
-        }
-
-        .modal-overlay.active {
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        .modal-content {
-            width: 100%;
-            max-width: 400px;
-            padding: 40px;
-            text-align: center;
-        }
-
-        .modal-title { font-size: 1.5rem; font-weight: 800; margin-bottom: 8px; }
-        .modal-subtitle { color: var(--text-dim); margin-bottom: 32px; font-size: 0.9rem; }
-
-        .sso-button {
-            width: 100%;
-            padding: 14px;
-            margin-bottom: 12px;
-            border-radius: 12px;
-            border: 1px solid var(--glass-border);
-            background: var(--glass-surface);
-            color: var(--text-main);
-            font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            transition: all 0.2s ease;
-        }
-
-        .sso-button:hover {
-            background: var(--glass-highlight);
-            border-color: var(--glass-highlight);
-        }
-
-        .sso-button img { width: 20px; height: 20px; }
-
-        .theme-toggle .icon-sun { display: none; }
-        .theme-toggle .icon-moon { display: block; }
-        [data-theme="light"] .theme-toggle .icon-sun { display: block; }
-        [data-theme="light"] .theme-toggle .icon-moon { display: none; }
 
         .glass-interactive:hover {
-            transform: translateY(-6px) scale(1.005);
+            transform: translateY(-6px);
             box-shadow: var(--shadow-md);
-            border-color: var(--glass-highlight);
+            border-color: rgba(255,255,255,0.15);
         }
 
-        /* Hero Section */
-        .hero { 
-            min-height: 100vh; 
-            display: flex; 
-            flex-direction: column; 
-            justify-content: center; 
-            align-items: center; 
-            padding: 80px 0; 
-            position: relative;
-        }
+        .hero { min-height: 80vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 80px 0; }
+        h1 { font-size: 5rem; font-weight: 800; margin-bottom: 24px; letter-spacing: -3px; line-height: 0.95; }
+        .hero p { font-size: 1.25rem; color: var(--text-dim); max-width: 640px; margin-bottom: 48px; }
+        .cta { padding: 16px 40px; background: var(--accent); color: white; border-radius: 99px; text-decoration: none; font-weight: 600; }
 
-        .hero-badge {
-            display: inline-flex;
-            align-items: center;
-            padding: 8px 16px;
-            background: rgba(225, 0, 15, 0.1);
-            border: 1px solid rgba(225, 0, 15, 0.2);
-            border-radius: 99px;
-            color: var(--accent);
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 13px;
-            font-weight: 600;
-            margin-bottom: 32px;
-            animation: fade-in 0.8s var(--ease-out-quart);
-        }
+        .bento-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 40px; }
+        .bento-item { padding: 40px; text-align: left; }
+        .bento-icon { color: var(--accent); font-family: 'JetBrains Mono'; font-size: 12px; margin-bottom: 20px; display: block; }
+        
+        .pilot-section { padding: 100px 0; }
+        .pilot-card { display: flex; text-align: left; background: var(--glass-surface); border-radius: 24px; border: 1px solid var(--glass-border); overflow: hidden; }
+        .pilot-content { flex: 1.2; padding: 60px; }
+        .pilot-visual { flex: 1; background: #080808; display: flex; align-items: center; justify-content: center; border-left: 1px solid var(--glass-border); }
+        .cta-text { color: var(--accent); text-decoration: none; font-weight: 600; }
 
-        h1 { 
-            font-size: clamp(3rem, 10vw, 5.5rem); 
-            font-weight: 800; 
-            margin: 0 0 24px 0; 
-            background: linear-gradient(180deg, var(--hero-gradient-from) 0%, var(--hero-gradient-to) 100%); 
-            -webkit-background-clip: text; 
-            background-clip: text;
-            color: transparent; 
-            letter-spacing: -3px; 
-            line-height: 1;
-            animation: fade-in 1s var(--ease-out-quart);
-        }
-
-        .hero-subtitle { 
-            font-size: clamp(1.1rem, 3vw, 1.5rem); 
-            color: var(--text-dim); 
-            max-width: 800px; 
-            line-height: 1.5; 
-            margin-bottom: 48px; 
-            animation: fade-in 1.2s var(--ease-out-quart);
-        }
-
-        .hero-subtitle span { color: #fff; font-weight: 600; }
-
-        .cta-group {
-            display: flex;
-            gap: 16px;
-            animation: fade-in 1.4s var(--ease-out-quart);
-        }
-
-        .cta-primary { 
-            padding: 18px 48px; 
-            font-size: 1.1rem; 
-            font-weight: 700; 
-            background: var(--accent); 
-            color: white; 
-            border: none; 
-            border-radius: 99px; 
-            cursor: pointer; 
-            text-decoration: none; 
-            transition: all 0.3s var(--ease-out-quart); 
-            box-shadow: var(--shadow-red);
-        }
-
-        .cta-primary:hover { 
-            background: var(--accent-hover); 
-            transform: translateY(-2px); 
-            box-shadow: 0 12px 32px rgba(225, 0, 15, 0.4);
-        }
-
-        .cta-secondary {
-            padding: 18px 48px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            background: var(--glass-surface);
-            color: var(--text-main);
-            border: 1px solid var(--glass-border);
-            border-radius: 99px;
-            cursor: pointer;
-            text-decoration: none;
-            transition: all 0.3s var(--ease-out-quart);
-            backdrop-filter: blur(8px);
-        }
-
-        .cta-secondary:hover {
-            background: var(--glass-highlight);
-            border-color: var(--glass-highlight);
-            transform: translateY(-2px);
-        }
-
-        /* Atlas Preview Section */
-        .atlas-preview {
-            width: 100%;
-            height: 600px;
-            margin: 80px 0;
-            border-radius: 32px;
-            background: radial-gradient(circle at center, var(--bg-deep) 0%, var(--bg-body) 100%);
-            border: 1px solid var(--glass-border);
-            position: relative;
-            overflow: hidden;
-            box-shadow: var(--shadow-lg);
-            animation: fade-in 1.6s var(--ease-out-quart);
-        }
-
-        .atlas-overlay {
-            position: absolute;
-            top: 40px;
-            left: 40px;
-            text-align: left;
-            z-index: 20;
-            pointer-events: none;
-        }
-
-        .atlas-overlay h3 { font-size: 1.5rem; margin: 0 0 8px 0; font-weight: 800; }
-        .atlas-overlay p { color: var(--text-dim); margin: 0; font-family: 'JetBrains Mono'; font-size: 12px; }
-
-        /* Stats Grid */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 24px;
-            margin: 100px 0;
-        }
-
-        .stat-card { padding: 40px; text-align: left; }
-        .stat-card .val { font-size: 3rem; font-weight: 800; color: var(--text-main); margin-bottom: 8px; line-height: 1; }
-        .stat-card .label { color: var(--text-dim); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 2px; font-weight: 600; }
-
-        /* Targets Gallery */
-        .targets-section { padding: 120px 0; border-top: 1px solid var(--footer-border); }
-        .section-label { 
-            font-family: 'JetBrains Mono', monospace; 
-            font-size: 12px; 
-            color: var(--accent); 
-            text-transform: uppercase; 
-            letter-spacing: 3px; 
-            margin-bottom: 48px; 
-            display: block; 
-        }
-
-        .targets-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-            gap: 24px;
-        }
-
-        .target-card {
-            padding: 32px;
-            text-align: left;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            min-height: 180px;
-            text-decoration: none;
-            color: inherit;
-        }
-
-        .target-card h3 { font-size: 1.4rem; font-weight: 700; margin: 0 0 12px 0; letter-spacing: -0.5px; }
-        .target-card .badge { 
-            font-size: 10px; 
-            font-family: 'JetBrains Mono'; 
-            padding: 4px 8px; 
-            background: var(--glass-surface); 
-            border-radius: 4px; 
-            width: fit-content;
-            color: var(--text-dim);
-            margin-bottom: 24px;
-        }
-        .target-card .link-text { color: var(--accent); font-weight: 600; font-size: 0.9rem; margin-top: auto; display: flex; align-items: center; gap: 8px; }
-        .target-card:hover .link-text { gap: 12px; transition: 0.2s; }
-
-        /* Mobile Adjustments */
         @media (max-width: 900px) {
-            .stats-grid { grid-template-columns: 1fr; }
-            .atlas-preview { height: 400px; }
+            .pilot-card { flex-direction: column; }
+            .bento-grid { grid-template-columns: repeat(2, 1fr); }
             h1 { font-size: 3.5rem; }
         }
-
-        /* 3D Visualizer Mockup */
-        .point-cloud {
-            width: 100%;
-            height: 100%;
-            background-image: 
-                radial-gradient(1px 1px at 20px 30px, #fff, rgba(0,0,0,0)),
-                radial-gradient(1px 1px at 40px 70px, rgba(255,255,255,0.5), rgba(0,0,0,0)),
-                radial-gradient(1px 1px at 50px 160px, #fff, rgba(0,0,0,0)),
-                radial-gradient(1px 1px at 80px 120px, rgba(255,255,255,0.3), rgba(0,0,0,0)),
-                radial-gradient(1px 1px at 110px 10px, rgba(255,255,255,0.7), rgba(0,0,0,0));
-            background-repeat: repeat;
-            background-size: 200px 200px;
-            opacity: var(--cloud-opacity);
-            transform: scale(2);
-            animation: spin-slow 120s linear infinite;
-        }
-
-        /* Admin UI */
-        .admin-only { display: none !important; }
-        body.is-admin .admin-only { display: block !important; }
-
-        .team-sidebar {
-            position: fixed;
-            left: 24px;
-            top: 24px;
-            bottom: 24px;
-            width: 280px;
-            z-index: 500;
-            padding: 32px;
-            text-align: left;
-        }
-
-        .team-sidebar h2 { font-size: 0.9rem; font-family: 'JetBrains Mono'; color: var(--accent); margin-bottom: 24px; letter-spacing: 2px; }
-        .collection-item {
-            padding: 12px;
-            border-bottom: 1px solid var(--glass-border);
-            font-size: 13px;
-            color: var(--text-dim);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .collection-item:hover { color: var(--text-main); background: var(--glass-surface); border-radius: 8px; }
-        .collection-item .count { font-family: 'JetBrains Mono'; font-size: 11px; opacity: 0.6; }
     </style>
 </head>
 <body>
-    <div class="nav-actions">
-        <button class="client-login" id="loginBtn">CLIENT LOGIN</button>
-        <button class="theme-toggle" aria-label="Toggle dark/light mode" title="Toggle theme">
-            <span class="icon-moon">🌙</span>
-            <span class="icon-sun">☀️</span>
-        </button>
-    </div>
-
-    <!-- SSO Modal -->
-    <div class="modal-overlay" id="loginModal">
-        <div class="glass modal-content">
-            <div class="modal-title">Enterprise SSO</div>
-            <div class="modal-subtitle">Secure access for verified R&D partners.</div>
-            
-            <button class="sso-button" onclick="alert('Mock SSO: Redirecting to Okta...')">
-                <span>Sign in with Okta</span>
-            </button>
-            <button class="sso-button" onclick="alert('Mock SSO: Redirecting to Auth0...')">
-                <span>Sign in with Auth0</span>
-            </button>
-            <button class="sso-button" onclick="alert('Mock SSO: Redirecting to Microsoft Azure...')">
-                <span>Sign in with Azure AD</span>
-            </button>
-
-            <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--glass-border);">
-                <label style="display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; font-size: 12px; font-family: 'JetBrains Mono';">
-                    <input type="checkbox" id="adminToggle" style="accent-color: var(--accent);">
-                    ENABLE ADMIN ROLE
-                </label>
-            </div>
-
-            <div style="margin-top: 24px; font-size: 11px; color: var(--text-dim); font-family: 'JetBrains Mono';">
-                Unauthorized access is strictly monitored.
-            </div>
-        </div>
-    </div>
-    <!-- Admin Sidebar -->
-    <div class="glass team-sidebar admin-only">
-        <h2>TEAM WORKSPACE</h2>
-        <div class="collection-item">
-            <span>High-Temp Adhesives</span>
-            <span class="count">4.2k</span>
-        </div>
-        <div class="collection-item">
-            <span>Bio-derived Resins</span>
-            <span class="count">1.1k</span>
-        </div>
-        <div class="collection-item">
-            <span>PFAS Alternatives</span>
-            <span class="count">850</span>
-        </div>
-        <div style="margin-top: 40px;">
-            <button class="cta-secondary" style="padding: 10px 16px; font-size: 11px; width: 100%;">Create Collection</button>
-        </div>
-
-        <h2 style="margin-top: 48px;">AUDIT LOGS</h2>
-        <div id="auditLogs" style="font-size: 11px; font-family: 'JetBrains Mono'; color: var(--text-dim);">
-            <div class="collection-item" style="border: none; padding: 4px 0;">
-                <span>User: kris@henkel.com</span>
-                <span class="count">Search: epoxy_22</span>
-            </div>
-            <div class="collection-item" style="border: none; padding: 4px 0;">
-                <span>User: admin@dreams.ai</span>
-                <span class="count">Export: PDF</span>
-            </div>
-        </div>
-    </div>
-
     <div class="hero">
         <div class="container">
-            <div class="hero-badge">NATURE BIOTECHNOLOGY (2025) VALIDATED</div>
-            <h1>87% of chemical data<br>is "dark matter."</h1>
-            <p class="hero-subtitle">Most R&D data stays locked in proprietary silos, invisible and underutilized. <span>DreaMS Lab</span> is the molecular intelligence layer that maps your chemical space in 3D, predicts property "white space," and accelerates discovery by 10x.</p>
-            
-            <div class="cta-group">
-                <a href="#targets" class="cta-primary" id="mainCta">Launch Enterprise Pilots</a>
-                <a href="https://github.com/dreams-lab/dreams" class="cta-secondary">Explore Research</a>
-            </div>
-
-            <div class="atlas-preview glass">
-                <div class="atlas-overlay">
-                    <h3>Global Chemical Atlas</h3>
-                    <p>SYSTEM_LOAD: 201,000,000 SPECTRA // REAL-TIME MAPPING</p>
-                </div>
-                <div class="point-cloud"></div>
-                <!-- This would be replaced by the actual 3D viewer in production -->
-                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle, transparent 30%, var(--vignette-color) 90%); pointer-events: none;"></div>
-            </div>
+            <h1>Dreams Lab</h1>
+            <p>Molecular intelligence for the next generation of materials. Map chemical space, predict properties, and discover white space with DreaMS.</p>
+            <a href="#pilots" class="cta">View Target Gallery</a>
         </div>
     </div>
 
-    <section class="container">
-        <div class="stats-grid">
-            <div class="glass stat-card">
-                <div class="val">201M</div>
-                <div class="label">Mass Spectra Trained</div>
+    <section id="pilots" class="pilot-section">
+        <div class="container">
+            <div class="pilot-card" style="margin-bottom: 40px; border-color: var(--accent);">
+                <div class="pilot-content">
+                    <h2 style="font-size: 2.5rem; margin-top: 0;">Henkel Adhesive Atlas</h2>
+                    <p>High-fidelity manifold of thousands of proprietary adhesive formulations. FAISS-powered similarity and automated R&D reporting.</p>
+                    <a href="henkel_lab_demo.html" class="cta-text">Launch Enterprise Lab &rarr;</a>
+                </div>
+                <div class="pilot-visual">
+                    <div style="width: 200px; height: 200px; border-radius: 50%; border: 2px dashed #333; animation: spin-slow 20s linear infinite; display: flex; align-items: center; justify-content: center;">
+                        <div style="width: 10px; height: 10px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 20px var(--accent);"></div>
+                    </div>
+                </div>
             </div>
-            <div class="glass stat-card">
-                <div class="val">0.94</div>
-                <div class="label">Retrieval Accuracy</div>
-            </div>
-            <div class="glass stat-card">
-                <div class="val">10x</div>
-                <div class="label">Discovery Velocity</div>
+
+            <div class="bento-grid">
+                <div class="glass glass-interactive bento-item" onclick="location.href='3m_demo.html'" style="cursor:pointer">
+                    <span class="bento-icon">3M</span>
+                    <h3>Adhesives & Tapes</h3>
+                    <p>Map 24,000+ proprietary formulations in 3D.</p>
+                </div>
+                <div class="glass glass-interactive bento-item" onclick="location.href='basf_demo.html'" style="cursor:pointer">
+                    <span class="bento-icon">BASF</span>
+                    <h3>Chemical Space</h3>
+                    <p>Global catalyst & polymer exploration.</p>
+                </div>
+                <div class="glass glass-interactive bento-item" onclick="location.href='avery_dennison_demo.html'" style="cursor:pointer">
+                    <span class="bento-icon">Avery Dennison</span>
+                    <h3>Label Materials</h3>
+                    <p>Next-gen sustainable adhesive discovery.</p>
+                </div>
+                <div class="glass glass-interactive bento-item" onclick="location.href='ppg_demo.html'" style="cursor:pointer">
+                    <span class="bento-icon">PPG</span>
+                    <h3>Paints & Coatings</h3>
+                    <p>Digital color & formulation mapping.</p>
+                </div>
+                <div class="glass glass-interactive bento-item" onclick="location.href='syensqo_demo.html'" style="cursor:pointer">
+                    <span class="bento-icon">Syensqo</span>
+                    <h3>Specialty Polymers</h3>
+                    <p>Advanced aerospace chemical intelligence.</p>
+                </div>
+                <div class="glass glass-interactive bento-item" onclick="location.href='henkel_demo.html'" style="cursor:pointer">
+                    <span class="bento-icon">Henkel (Stable)</span>
+                    <h3>Adhesive Atlas</h3>
+                    <p>Standard storytelling version (No FAISS).</p>
+                </div>
             </div>
         </div>
     </section>
-
-    <section id="targets" class="targets-section">
-        <div class="container">
-            <span class="section-label">Enterprise Deployment Targets</span>
-            <div class="targets-grid">
-                <!-- Row 1 -->
-                <a href="henkel_lab_demo.html" class="glass glass-interactive target-card">
-                    <div class="badge">ADHESIVES & SEALANTS</div>
-                    <h3>Henkel</h3>
-                    <div class="link-text">Launch Atlas &rarr;</div>
-                </a>
-                <a href="3m_demo.html" class="glass glass-interactive target-card">
-                    <div class="badge">MULTINATIONAL MATERIALS</div>
-                    <h3>3M</h3>
-                    <div class="link-text">Launch Atlas &rarr;</div>
-                </a>
-                <a href="basf_demo.html" class="glass glass-interactive target-card">
-                    <div class="badge">INDUSTRIAL CHEMICALS</div>
-                    <h3>BASF</h3>
-                    <div class="link-text">Launch Atlas &rarr;</div>
-                </a>
-                <a href="dow_demo.html" class="glass glass-interactive target-card">
-                    <div class="badge">PLASTICS & COATINGS</div>
-                    <h3>Dow</h3>
-                    <div class="link-text">Launch Atlas &rarr;</div>
-                </a>
-
-                <!-- Row 2 -->
-                <a href="dupont_demo.html" class="glass glass-interactive target-card">
-                    <div class="badge">SPECIALTY MATERIALS</div>
-                    <h3>DuPont</h3>
-                    <div class="link-text">Launch Atlas &rarr;</div>
-                </a>
-                <a href="evonik_demo.html" class="glass glass-interactive target-card">
-                    <div class="badge">SPECIALTY CHEMICALS</div>
-                    <h3>Evonik</h3>
-                    <div class="link-text">Launch Atlas &rarr;</div>
-                </a>
-                <a href="arkema_demo.html" class="glass glass-interactive target-card">
-                    <div class="badge">ADVANCED MATERIALS</div>
-                    <h3>Arkema</h3>
-                    <div class="link-text">Launch Atlas &rarr;</div>
-                </a>
-                <a href="avery_dennison_demo.html" class="glass glass-interactive target-card">
-                    <div class="badge">LABELS & PACKAGING</div>
-                    <h3>Avery Dennison</h3>
-                    <div class="link-text">Launch Atlas &rarr;</div>
-                </a>
-
-                <!-- Row 3 -->
-                <a href="covestro_demo.html" class="glass glass-interactive target-card">
-                    <div class="badge">POLYURETHANES</div>
-                    <h3>Covestro</h3>
-                    <div class="link-text">Launch Atlas &rarr;</div>
-                </a>
-                <a href="ppg_demo.html" class="glass glass-interactive target-card">
-                    <div class="badge">PAINTS & COATINGS</div>
-                    <h3>PPG</h3>
-                    <div class="link-text">Launch Atlas &rarr;</div>
-                </a>
-                <a href="syensqo_demo.html" class="glass glass-interactive target-card">
-                    <div class="badge">SPECIALTY POLYMERS</div>
-                    <h3>Syensqo</h3>
-                    <div class="link-text">Launch Atlas &rarr;</div>
-                </a>
-                <a href="akzonobel_demo.html" class="glass glass-interactive target-card">
-                    <div class="badge">PERFORMANCE COATINGS</div>
-                    <h3>AkzoNobel</h3>
-                    <div class="link-text">Launch Atlas &rarr;</div>
-                </a>
-                <a href="clariant_demo.html" class="glass glass-interactive target-card">
-                    <div class="badge">CARE CHEMICALS</div>
-                    <h3>Clariant</h3>
-                    <div class="link-text">Launch Atlas &rarr;</div>
-                </a>
-            </div>
-        </div>
-    </section>
-
-    <footer style="padding: 80px 0; color: var(--text-dim); font-family: 'JetBrains Mono'; font-size: 12px; border-top: 1px solid var(--footer-border); margin-top: 100px;">
-        <div class="container">
-            <p>&copy; 2026 DreaMS Lab. All Rights Reserved. Built on DreaMS Foundation Model.</p>
-        </div>
-    </footer>
-
-    <script>
-        // Intersection Observer for Lazy Reveal
-        const observerOptions = {
-            threshold: 0.1,
-            rootMargin: '0px 0px -50px 0px'
-        };
-
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('visible');
-                    observer.unobserve(entry.target);
-                }
-            });
-        }, observerOptions);
-
-        document.querySelectorAll('.target-card, .stat-card').forEach(el => {
-            el.classList.add('reveal');
-            observer.observe(el);
-        });
-
-        // Simple Analytics for Index Page
-        const FAISS_BASE_URL = "https://dreams-atlas.onrender.com";
-        async function trackEvent(event, meta = {}) {
-            try {
-                await fetch(`${FAISS_BASE_URL}/api/track`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        event,
-                        meta: { ...meta, url: window.location.href, ua: navigator.userAgent }
-                    })
-                });
-            } catch (e) {}
-        }
-        trackEvent('index_view');
-        document.querySelectorAll('a').forEach(link => {
-            link.addEventListener('click', () => {
-                trackEvent('link_click', { href: link.href, text: link.innerText });
-            });
-        });
-
-        // Dark/Light Theme Toggle with localStorage persistence
-        (function() {
-            const toggle = document.querySelector('.theme-toggle');
-            const html = document.documentElement;
-            
-            // Check saved preference, then system preference
-            function getPreferredTheme() {
-                const saved = localStorage.getItem('dreams-theme');
-                if (saved) return saved;
-                return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-            }
-
-            function setTheme(theme) {
-                html.setAttribute('data-theme', theme);
-                localStorage.setItem('dreams-theme', theme);
-            }
-
-            // Apply saved theme immediately (no flash)
-            setTheme(getPreferredTheme());
-
-            toggle.addEventListener('click', () => {
-                const current = html.getAttribute('data-theme') || 'dark';
-                const next = current === 'dark' ? 'light' : 'dark';
-                setTheme(next);
-                trackEvent('theme_toggle', { theme: next });
-            });
-
-            // Modal Logic
-            const loginBtn = document.getElementById('loginBtn');
-            const loginModal = document.getElementById('loginModal');
-
-            loginBtn.addEventListener('click', () => {
-                loginModal.classList.add('active');
-                trackEvent('modal_open', { type: 'login' });
-            });
-
-            loginModal.addEventListener('click', (e) => {
-                if (e.target === loginModal) {
-                    loginModal.classList.remove('active');
-                }
-            });
-
-            const adminToggle = document.getElementById('adminToggle');
-            adminToggle.addEventListener('change', () => {
-                const isAdmin = adminToggle.checked;
-                localStorage.setItem('dreams-admin', isAdmin);
-                document.body.classList.toggle('is-admin', isAdmin);
-                trackEvent('role_change', { role: isAdmin ? 'admin' : 'viewer' });
-                alert(isAdmin ? 'Admin privileges enabled (Mock)' : 'Switched to Viewer role');
-            });
-
-            if (localStorage.getItem('dreams-admin') === 'true') {
-                adminToggle.checked = true;
-                document.body.classList.add('is-admin');
-            }
-
-            // Listen for OS theme changes
-            window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {
-                if (!localStorage.getItem('dreams-theme')) {
-                    setTheme(e.matches ? 'light' : 'dark');
-                }
-            });
-
-            // A/B Testing for CTA
-            const cta = document.getElementById('mainCta');
-            const variants = ["Launch Enterprise Pilots", "Start Free Space Audit", "Scale Your R&D"];
-            const variantIdx = Math.floor(Math.random() * variants.length);
-            cta.innerText = variants[variantIdx];
-            trackEvent('ab_variant', { variant: variants[variantIdx] });
-        })();
-    </script>
 </body>
 </html>

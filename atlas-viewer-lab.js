@@ -254,7 +254,7 @@ function populateLabDropdown(json) {
     };
 }
 
-function updateLabDetails(spectrumId) {
+async function updateLabDetails(spectrumId) {
     if (!labAtlasData.length || !spectrumId) return;
     const idx = labIdToIdx.get(spectrumId);
     if (idx === undefined) return;
