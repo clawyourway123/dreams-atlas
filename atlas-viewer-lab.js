@@ -105,7 +105,9 @@ function generateLabData() {
             labAtlasData = json;
             labIdToIdx.clear();
 
-            const n = json.length;
+            const isMobile = window.innerWidth < 768;
+            const n = isMobile ? Math.min(json.length, 2500) : json.length;
+            
             labDistsBuffer = new Float32Array(n);
             labIndicesBuffer = new Int32Array(n);
 
@@ -129,10 +131,10 @@ function generateLabData() {
                 text: ids,
                 hoverinfo: 'text',
                 marker: {
-                    size: 3,
+                    size: isMobile ? 2 : 3,
                     color: colors,
                     colorscale: 'Viridis',
-                    opacity: 0.65,
+                    opacity: isMobile ? 0.4 : 0.65,
                     line: {width: 0}
                 },
                 type: 'scatter3d',

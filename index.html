@@ -575,7 +575,7 @@
             <p class="hero-subtitle">Most R&D data stays locked in proprietary silos, invisible and underutilized. <span>DreaMS Lab</span> is the molecular intelligence layer that maps your chemical space in 3D, predicts property "white space," and accelerates discovery by 10x.</p>
             
             <div class="cta-group">
-                <a href="#targets" class="cta-primary">Launch Enterprise Pilots</a>
+                <a href="#targets" class="cta-primary" id="mainCta">Launch Enterprise Pilots</a>
                 <a href="https://github.com/dreams-lab/dreams" class="cta-secondary">Explore Research</a>
             </div>
 
@@ -796,6 +796,13 @@
                     setTheme(e.matches ? 'light' : 'dark');
                 }
             });
+
+            // A/B Testing for CTA
+            const cta = document.getElementById('mainCta');
+            const variants = ["Launch Enterprise Pilots", "Start Free Space Audit", "Scale Your R&D"];
+            const variantIdx = Math.floor(Math.random() * variants.length);
+            cta.innerText = variants[variantIdx];
+            trackEvent('ab_variant', { variant: variants[variantIdx] });
         })();
     </script>
 </body>
