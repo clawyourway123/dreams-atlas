@@ -11,23 +11,38 @@ import logging
 import os
 import re
 import time
-from collections import OrderedDict
+from collections import deque, OrderedDict
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 import numpy as np
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
 
 # ---------------------------------------------------------------------------
-# Logging
+# Logging & Event Tracking
 # ---------------------------------------------------------------------------
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
 )
 logger = logging.getLogger("dreams-atlas")
+
+# Keep last 100 log messages in memory for /api/logs
+event_log = deque(maxlen=100)
+
+class LogHandler(logging.Handler):
+    def emit(self, record):
+        log_entry = self.format(record)
+        event_log.append({
+            "time": time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(record.created)),
+            "level": record.levelname,
+            "message": record.getMessage()
+        })
+
+logger.addHandler(LogHandler())
 
 # Resolve the project root (one level up from backend/)
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -145,56 +160,68 @@ def numpy_search(query_vec: np.ndarray, k: int) -> tuple[np.ndarray, np.ndarray]
 # ---------------------------------------------------------------------------
 # Data Loading
 # ---------------------------------------------------------------------------
-def load_data():
+def load_data(retries=3):
     global index, vectors, id_map, reverse_map
 
-    logger.info("Loading embeddings...")
-    try:
-        embeddings_path = PROJECT_ROOT / "embeddings_checkpoint.npy"
-        atlas_path = PROJECT_ROOT / "atlas_data.json"
+    for attempt in range(retries):
+        logger.info(f"Loading embeddings (attempt {attempt + 1}/{retries})...")
+        try:
+            embeddings_path = PROJECT_ROOT / "embeddings_checkpoint.npy"
+            atlas_path = PROJECT_ROOT / "atlas_data.json"
 
-        # Load ID mapping first so we know how many vectors to generate
-        n_items = 1000  # default fallback
-        if atlas_path.exists():
-            with open(atlas_path, "r") as f:
-                atlas_json = json.load(f)
-                for i, item in enumerate(atlas_json):
-                    str_id = item.get("id", f"ID_{i}")
-                    id_map[i] = str_id
-                    reverse_map[str_id] = i
-                n_items = len(atlas_json)
-            logger.info(f"Loaded {len(id_map)} ID mappings from atlas_data.json")
-        else:
-            logger.warning("atlas_data.json not found — using numeric IDs")
+            # Clear existing data if retrying
+            id_map.clear()
+            reverse_map.clear()
 
-        # Load vectors
-        if embeddings_path.exists():
-            vectors = np.load(str(embeddings_path)).astype("float32")
-            logger.info(f"Loaded {vectors.shape[0]} vectors ({vectors.shape[1]}D)")
-        else:
-            logger.warning(
-                "embeddings_checkpoint.npy not found — generating %d mock vectors", n_items
-            )
-            np.random.seed(42)
-            vectors = np.random.rand(n_items, 512).astype("float32")
+            # Load ID mapping first so we know how many vectors to generate
+            n_items = 1000  # default fallback
+            if atlas_path.exists():
+                with open(atlas_path, "r") as f:
+                    atlas_json = json.load(f)
+                    for i, item in enumerate(atlas_json):
+                        str_id = item.get("id", f"ID_{i}")
+                        id_map[i] = str_id
+                        reverse_map[str_id] = i
+                    n_items = len(atlas_json)
+                logger.info(f"Loaded {len(id_map)} ID mappings from atlas_data.json")
+            else:
+                logger.warning("atlas_data.json not found — using numeric IDs")
 
-        # If atlas wasn't loaded yet, build numeric IDs matching vector count
-        if not id_map:
-            for i in range(vectors.shape[0]):
-                id_map[i] = f"ID_{i}"
-                reverse_map[f"ID_{i}"] = i
+            # Load vectors
+            if embeddings_path.exists():
+                vectors = np.load(str(embeddings_path)).astype("float32")
+                logger.info(f"Loaded {vectors.shape[0]} vectors ({vectors.shape[1]}D)")
+            else:
+                logger.warning(
+                    "embeddings_checkpoint.npy not found — generating %d mock vectors", n_items
+                )
+                np.random.seed(42)
+                vectors = np.random.rand(n_items, 512).astype("float32")
 
-        # Build FAISS index (or skip if unavailable)
-        if faiss_available and faiss is not None:
-            d = vectors.shape[1]
-            index = faiss.IndexFlatL2(d)
-            index.add(vectors)
-            logger.info(f"FAISS index built: {index.ntotal} vectors")
-        else:
-            logger.info("Using numpy fallback for similarity search")
+            # If atlas wasn't loaded yet, build numeric IDs matching vector count
+            if not id_map:
+                for i in range(vectors.shape[0]):
+                    id_map[i] = f"ID_{i}"
+                    reverse_map[f"ID_{i}"] = i
 
-    except Exception as e:
-        logger.error(f"Error loading data: {e}", exc_info=True)
+            # Build FAISS index (or skip if unavailable)
+            if faiss_available and faiss is not None:
+                d = vectors.shape[1]
+                index = faiss.IndexFlatL2(d)
+                index.add(vectors)
+                logger.info(f"FAISS index built: {index.ntotal} vectors")
+            else:
+                logger.info("Using numpy fallback for similarity search")
+            
+            # If we reached here, success!
+            return
+
+        except Exception as e:
+            logger.error(f"Error loading data (attempt {attempt + 1}): {e}", exc_info=True)
+            if attempt < retries - 1:
+                time.sleep(2)
+            else:
+                logger.critical("Failed to load data after all retries.")
 
 
 # ---------------------------------------------------------------------------
@@ -207,6 +234,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="DreaMS Atlas", lifespan=lifespan)
+
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 app.add_middleware(
     CORSMiddleware,
@@ -269,6 +298,12 @@ def api_status():
     elif vectors is not None:
         vec_count = vectors.shape[0]
     return {"status": "ok", "vectors": vec_count, "faiss": faiss_available}
+
+
+@app.get("/api/logs")
+def get_logs():
+    """Returns the last 100 log entries."""
+    return list(event_log)
 
 
 # ---------------------------------------------------------------------------
