@@ -182,8 +182,13 @@ companies = [
     {"name": "Henkel", "industry": "Adhesives", "count": "24,593", "file": "henkel_lab_demo.html"},
 ]
 
+v = "2.6.2"
+
 for c in companies:
-    content = template.format(company=c["name"], industry=c["industry"], spectra_count=c["count"])
+    content = template.replace("{company}", c["name"]).replace("{industry}", c["industry"]).replace("{spectra_count}", c["count"])
+    content = content.replace("atlas-viewer-lab.min.js", f"atlas-viewer-lab.js?v={v}")
+    content = content.replace("atlas.css", f"atlas.css?v={v}")
+    content = content.replace("RDKit_minimal.js", "RDKit_minimal.js\" async=\"true")
     with open(f"/Users/clawdy/.openclaw/workspace/dreams-atlas/{c['file']}", "w") as f:
         f.write(content)
     print(f"Generated {c['file']}")

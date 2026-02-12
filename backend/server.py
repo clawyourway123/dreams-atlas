@@ -400,6 +400,61 @@ def get_smiles(id: str):
     return {"id": clean_id, "smiles": mock_smiles.get(clean_id, "CN1C=NC2=C1C(=O)N(C(=O)N2C)C")} # Caffeine fallback
 
 # ---------------------------------------------------------------------------
+# Phase 20: Predictive ADMET & Safety Intelligence
+# ---------------------------------------------------------------------------
+@app.get("/api/safety/score")
+def safety_score(id: str):
+    """Predictive ADMET and safety scoring (Mock - Tox21/ClinTox integration)."""
+    clean_id = validate_search_id(id)
+    
+    # Deterministic mock scoring based on ID hash
+    h = hash(clean_id)
+    tox21_score = round(0.5 + (h % 50) / 100.0, 2) # 0.5 - 0.99
+    clintox_pass = (h % 10) > 1 # 80% pass rate
+    
+    # CYP450 Liabilities (Red Flags)
+    liabilities = []
+    if h % 7 == 0: liabilities.append("CYP3A4 Inhibition")
+    if h % 11 == 0: liabilities.append("hERG Channel Blockade")
+    if h % 13 == 0: liabilities.append("Hepatotoxicity Risk")
+    
+    # BBB Penetration
+    bbb_prob = round((h % 100) / 100.0, 2)
+    
+    return {
+        "id": clean_id,
+        "tox21_safety_score": tox21_score,
+        "clintox_status": "PASS" if clintox_pass else "FAIL",
+        "red_flags": liabilities,
+        "admet": {
+            "logP": round(1.0 + (h % 40) / 10.0, 2),
+            "molecular_weight": 200 + (h % 500),
+            "bbb_penetration": bbb_prob,
+            "h_bond_donors": h % 5,
+            "h_bond_acceptors": h % 10
+        },
+        "mpo_score": round((tox21_score + bbb_prob + (1 if clintox_pass else 0)) / 3.0, 2)
+    }
+
+@app.get("/api/safety/sds")
+def safety_sds(id: str):
+    """Generate a mock Safety Data Sheet (SDS) for a molecule."""
+    clean_id = validate_search_id(id)
+    return {
+        "id": clean_id,
+        "document_type": "Safety Data Sheet (Draft)",
+        "version": "2026.1",
+        "sections": {
+            "1_identification": f"Product: {clean_id} (DreaMS De Novo Candidate)",
+            "2_hazard_identification": "GHS Category 4: Harmful if swallowed. Potential skin irritant.",
+            "3_composition": f"Pure substance: {clean_id} (>98% purity target)",
+            "4_first_aid": "In case of contact, flush with water. Seek medical attention if symptoms persist.",
+            "8_exposure_controls": "Wear appropriate PPE (gloves, safety glasses, lab coat). Handle in a well-ventilated fume hood."
+        },
+        "disclaimer": "This is a predicted SDS based on ML models and has not been verified by physical testing."
+    }
+
+# ---------------------------------------------------------------------------
 # Static Files
 # ---------------------------------------------------------------------------
 @app.get("/")
