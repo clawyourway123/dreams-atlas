@@ -152,6 +152,112 @@
             border-color: var(--glass-highlight);
             box-shadow: var(--shadow-md);
         }
+        
+        .nav-actions {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 1000;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .client-login {
+            padding: 10px 20px;
+            font-size: 13px;
+            font-weight: 600;
+            background: var(--glass-surface);
+            color: var(--text-main);
+            border: 1px solid var(--glass-border);
+            border-radius: 99px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.3s var(--ease-out-quart);
+            backdrop-filter: blur(12px);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .client-login:hover {
+            background: var(--glass-highlight);
+            border-color: var(--glass-highlight);
+            transform: translateY(-2px);
+        }
+
+        .theme-toggle {
+            position: relative;
+            top: 0; right: 0;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 1px solid var(--glass-border);
+            background: var(--glass-surface);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: all 0.3s var(--ease-out-quart);
+            box-shadow: var(--shadow-sm);
+            color: var(--text-main);
+        }
+
+        /* Modal System */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            width: 100%;
+            max-width: 400px;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .modal-title { font-size: 1.5rem; font-weight: 800; margin-bottom: 8px; }
+        .modal-subtitle { color: var(--text-dim); margin-bottom: 32px; font-size: 0.9rem; }
+
+        .sso-button {
+            width: 100%;
+            padding: 14px;
+            margin-bottom: 12px;
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            background: var(--glass-surface);
+            color: var(--text-main);
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .sso-button:hover {
+            background: var(--glass-highlight);
+            border-color: var(--glass-highlight);
+        }
+
+        .sso-button img { width: 20px; height: 20px; }
+
         .theme-toggle .icon-sun { display: none; }
         .theme-toggle .icon-moon { display: block; }
         [data-theme="light"] .theme-toggle .icon-sun { display: block; }
@@ -363,13 +469,105 @@
             transform: scale(2);
             animation: spin-slow 120s linear infinite;
         }
+
+        /* Admin UI */
+        .admin-only { display: none !important; }
+        body.is-admin .admin-only { display: block !important; }
+
+        .team-sidebar {
+            position: fixed;
+            left: 24px;
+            top: 24px;
+            bottom: 24px;
+            width: 280px;
+            z-index: 500;
+            padding: 32px;
+            text-align: left;
+        }
+
+        .team-sidebar h2 { font-size: 0.9rem; font-family: 'JetBrains Mono'; color: var(--accent); margin-bottom: 24px; letter-spacing: 2px; }
+        .collection-item {
+            padding: 12px;
+            border-bottom: 1px solid var(--glass-border);
+            font-size: 13px;
+            color: var(--text-dim);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .collection-item:hover { color: var(--text-main); background: var(--glass-surface); border-radius: 8px; }
+        .collection-item .count { font-family: 'JetBrains Mono'; font-size: 11px; opacity: 0.6; }
     </style>
 </head>
 <body>
-    <button class="theme-toggle" aria-label="Toggle dark/light mode" title="Toggle theme">
-        <span class="icon-moon">🌙</span>
-        <span class="icon-sun">☀️</span>
-    </button>
+    <div class="nav-actions">
+        <button class="client-login" id="loginBtn">CLIENT LOGIN</button>
+        <button class="theme-toggle" aria-label="Toggle dark/light mode" title="Toggle theme">
+            <span class="icon-moon">🌙</span>
+            <span class="icon-sun">☀️</span>
+        </button>
+    </div>
+
+    <!-- SSO Modal -->
+    <div class="modal-overlay" id="loginModal">
+        <div class="glass modal-content">
+            <div class="modal-title">Enterprise SSO</div>
+            <div class="modal-subtitle">Secure access for verified R&D partners.</div>
+            
+            <button class="sso-button" onclick="alert('Mock SSO: Redirecting to Okta...')">
+                <span>Sign in with Okta</span>
+            </button>
+            <button class="sso-button" onclick="alert('Mock SSO: Redirecting to Auth0...')">
+                <span>Sign in with Auth0</span>
+            </button>
+            <button class="sso-button" onclick="alert('Mock SSO: Redirecting to Microsoft Azure...')">
+                <span>Sign in with Azure AD</span>
+            </button>
+
+            <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--glass-border);">
+                <label style="display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; font-size: 12px; font-family: 'JetBrains Mono';">
+                    <input type="checkbox" id="adminToggle" style="accent-color: var(--accent);">
+                    ENABLE ADMIN ROLE
+                </label>
+            </div>
+
+            <div style="margin-top: 24px; font-size: 11px; color: var(--text-dim); font-family: 'JetBrains Mono';">
+                Unauthorized access is strictly monitored.
+            </div>
+        </div>
+    </div>
+    <!-- Admin Sidebar -->
+    <div class="glass team-sidebar admin-only">
+        <h2>TEAM WORKSPACE</h2>
+        <div class="collection-item">
+            <span>High-Temp Adhesives</span>
+            <span class="count">4.2k</span>
+        </div>
+        <div class="collection-item">
+            <span>Bio-derived Resins</span>
+            <span class="count">1.1k</span>
+        </div>
+        <div class="collection-item">
+            <span>PFAS Alternatives</span>
+            <span class="count">850</span>
+        </div>
+        <div style="margin-top: 40px;">
+            <button class="cta-secondary" style="padding: 10px 16px; font-size: 11px; width: 100%;">Create Collection</button>
+        </div>
+
+        <h2 style="margin-top: 48px;">AUDIT LOGS</h2>
+        <div id="auditLogs" style="font-size: 11px; font-family: 'JetBrains Mono'; color: var(--text-dim);">
+            <div class="collection-item" style="border: none; padding: 4px 0;">
+                <span>User: kris@henkel.com</span>
+                <span class="count">Search: epoxy_22</span>
+            </div>
+            <div class="collection-item" style="border: none; padding: 4px 0;">
+                <span>User: admin@dreams.ai</span>
+                <span class="count">Export: PDF</span>
+            </div>
+        </div>
+    </div>
+
     <div class="hero">
         <div class="container">
             <div class="hero-badge">NATURE BIOTECHNOLOGY (2025) VALIDATED</div>
@@ -562,6 +760,35 @@
                 setTheme(next);
                 trackEvent('theme_toggle', { theme: next });
             });
+
+            // Modal Logic
+            const loginBtn = document.getElementById('loginBtn');
+            const loginModal = document.getElementById('loginModal');
+
+            loginBtn.addEventListener('click', () => {
+                loginModal.classList.add('active');
+                trackEvent('modal_open', { type: 'login' });
+            });
+
+            loginModal.addEventListener('click', (e) => {
+                if (e.target === loginModal) {
+                    loginModal.classList.remove('active');
+                }
+            });
+
+            const adminToggle = document.getElementById('adminToggle');
+            adminToggle.addEventListener('change', () => {
+                const isAdmin = adminToggle.checked;
+                localStorage.setItem('dreams-admin', isAdmin);
+                document.body.classList.toggle('is-admin', isAdmin);
+                trackEvent('role_change', { role: isAdmin ? 'admin' : 'viewer' });
+                alert(isAdmin ? 'Admin privileges enabled (Mock)' : 'Switched to Viewer role');
+            });
+
+            if (localStorage.getItem('dreams-admin') === 'true') {
+                adminToggle.checked = true;
+                document.body.classList.add('is-admin');
+            }
 
             // Listen for OS theme changes
             window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {

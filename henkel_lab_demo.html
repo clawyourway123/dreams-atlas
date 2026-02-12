@@ -95,10 +95,16 @@
         <button class="btn" style="background: var(--panel-bg); border: 1px solid var(--border-color); color: var(--text-main);" onclick="shareView()">Share View</button>
     </div>
 
+    <div class="btn-group" style="margin-top: 8px;">
+        <button class="btn" onclick="calculateCoverage()" style="background: #1a1a1a; border-color: #333;">Coverage Map</button>
+        <button class="btn" onclick="exportReportPDF()" style="background: #1a1a1a; border-color: #333;">Generate Report</button>
+    </div>
+
     <div style="margin-top: 30px; border-top: 1px solid var(--border-color); padding-top: 20px;">
         <h2>What you're seeing</h2>
         <ul style="font-size: 12px; color: var(--text-dim); padding-left: 15px; line-height: 1.6;">
             <li style="margin-bottom: 8px;"><strong style="color:var(--header-text)">DreaMS Atlas (Lab):</strong> High-fidelity manifold of Henkel's proprietary chemical space.</li>
+            <li style="margin-bottom: 8px;"><strong style="color:var(--header-text)">Automated R&D Reporting:</strong> Instant generation of PDF/CSV dossiers for patent filings.</li>
             <li style="margin-bottom: 8px;"><strong style="color:var(--header-text)">FAISS Similarity:</strong> Real-time neighborhood ranking via the DreaMS foundation model.</li>
             <li style="margin-bottom: 8px;"><strong style="color:var(--header-text)">Strategic Insight:</strong> Built for R&D leaders to identify "<span class="tooltip" data-tooltip="Unexplored regions of chemical space where new, patentable molecules may exist.">white space</span>" for IP protection.</li>
         </ul>
@@ -120,6 +126,11 @@
       <div style="margin-top:8px; font-size:11px; color:var(--text-dim);">
           Most similar (top 10):
           <ol id="detail-neighbors" style="margin:4px 0 0; padding-left:16px; max-height:160px; overflow-y:auto; color:var(--text-main)"></ol>
+      </div>
+      <div style="margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 12px;">
+          <label style="font-size: 11px; color: var(--text-dim); display: block; margin-bottom: 5px;">R&D Annotation</label>
+          <textarea id="annotationBox" style="width: 100%; background: var(--bg-body); border: 1px solid var(--border-color); color: var(--text-main); font-size: 11px; border-radius: 4px; padding: 6px; height: 40px; resize: none;" placeholder="Add team note..."></textarea>
+          <button class="btn" onclick="saveAnnotation()" style="margin-top: 5px; width: 100%; font-size: 10px; padding: 6px;">Save Note</button>
       </div>
   </div>
 </div>

@@ -260,7 +260,7 @@ def get_logs():
     return list(event_log)
 
 @app.get("/api/search")
-def api_search(request: Request, id: str, k: int = 20):
+def api_search(request: Request, id: str, k: int = 20, tenant_id: str = "default"):
     client_ip = request.client.host if request.client else "unknown"
     if not rate_limiter.is_allowed(client_ip):
         raise HTTPException(status_code=429, detail="Rate limit")
@@ -268,9 +268,13 @@ def api_search(request: Request, id: str, k: int = 20):
     clean_id = validate_search_id(id)
     k = max(1, min(k, 100))
 
-    cache_key = f"{clean_id}:{k}"
+    # Mock data isolation: filter results based on tenant_id
+    # In a real app, this would filter the FAISS index or lookup table.
+    logger.info(f"SEARCH [Tenant: {tenant_id}] | ID: {clean_id} | k: {k}")
+
+    cache_key = f"{tenant_id}:{clean_id}:{k}"
     cached = search_cache.get(cache_key)
-    if cached: return {"query": clean_id, "results": cached}
+    if cached: return {"query": clean_id, "tenant": tenant_id, "results": cached}
 
     query_idx = reverse_map.get(clean_id, -1)
     if query_idx == -1: raise HTTPException(status_code=404)
@@ -285,8 +289,13 @@ def api_search(request: Request, id: str, k: int = 20):
         dist = float(D[0][rank])
         results.append({"id": id_map.get(int(idx)), "score": round(1.0/(1.0+dist), 6), "rank": rank})
 
+    # Mock tenant-specific filtering (simulated)
+    if tenant_id != "default":
+        # Simulate that some tenants only see a subset (e.g., even IDs)
+        results = [r for r in results if hash(f"{tenant_id}{r['id']}") % 2 == 0]
+
     search_cache.put(cache_key, results)
-    return {"query": clean_id, "results": results}
+    return {"query": clean_id, "tenant": tenant_id, "results": results}
 
 @app.post("/api/track")
 async def api_track(request: Request):
