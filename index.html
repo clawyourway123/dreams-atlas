@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dreams Lab - Molecular Intelligence</title>
+    <title>DreaMS Lab | Molecular Intelligence for Enterprise Discovery</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -21,7 +21,7 @@
             --glass-highlight: rgba(255, 255, 255, 0.15);
             --glass-blur: 16px;
             
-            /* Stripe-inspired Shadows */
+            /* Shadows */
             --shadow-sm: 0 2px 4px rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);
             --shadow-md: 0 12px 24px -6px rgba(0,0,0,0.5), 0 4px 8px -2px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1);
             --shadow-lg: 0 24px 48px -12px rgba(0,0,0,0.7), 0 12px 24px -6px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
@@ -32,7 +32,7 @@
         }
 
         @keyframes spin-slow { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        @keyframes pulse-ring { 0% { transform: scale(0.8); opacity: 0.3; } 50% { transform: scale(1); opacity: 0.6; } 100% { transform: scale(0.8); opacity: 0.3; } }
+        @keyframes fade-in { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
         body { 
             margin: 0; 
@@ -45,9 +45,10 @@
             text-align: center; 
             scroll-behavior: smooth;
             -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
         }
 
-        .container { max-width: 1100px; margin: 0 auto; padding: 0 20px; position: relative; z-index: 10; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 10; }
         
         /* Utility: Glass Engine */
         .glass {
@@ -62,7 +63,6 @@
             transition: transform 0.4s var(--ease-out-quart), box-shadow 0.4s var(--ease-out-quart), border-color 0.4s ease;
         }
 
-        /* Top-light Highlight effect */
         .glass::before {
             content: '';
             position: absolute;
@@ -79,63 +79,65 @@
             border-color: rgba(255,255,255,0.15);
         }
 
-        .glass-accent-red:hover {
-            box-shadow: var(--shadow-lg), var(--shadow-red);
-            border-color: rgba(225, 0, 15, 0.4);
-        }
-
-        /* Hero */
+        /* Hero Section */
         .hero { 
-            min-height: 90vh; 
+            min-height: 100vh; 
             display: flex; 
             flex-direction: column; 
             justify-content: center; 
             align-items: center; 
-            padding: 100px 0; 
+            padding: 80px 0; 
             position: relative;
         }
-        
-        /* Background Mesh/Glow */
-        .hero::before {
-            content: '';
-            position: absolute;
-            top: -20%;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 80vw;
-            height: 80vw;
-            background: radial-gradient(circle, rgba(255,255,255,0.03) 0%, rgba(0,0,0,0) 60%);
-            pointer-events: none;
-            z-index: 0;
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 8px 16px;
+            background: rgba(225, 0, 15, 0.1);
+            border: 1px solid rgba(225, 0, 15, 0.2);
+            border-radius: 99px;
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 32px;
+            animation: fade-in 0.8s var(--ease-out-quart);
         }
 
         h1 { 
-            font-size: 5rem; 
+            font-size: clamp(3rem, 10vw, 5.5rem); 
             font-weight: 800; 
-            margin-bottom: 24px; 
+            margin: 0 0 24px 0; 
             background: linear-gradient(180deg, #fff 0%, #a1a1aa 100%); 
             -webkit-background-clip: text; 
             color: transparent; 
             letter-spacing: -3px; 
-            line-height: 0.95;
-            position: relative;
-            z-index: 10;
+            line-height: 1;
+            animation: fade-in 1s var(--ease-out-quart);
         }
 
-        .hero p { 
-            font-size: 1.25rem; 
+        .hero-subtitle { 
+            font-size: clamp(1.1rem, 3vw, 1.5rem); 
             color: var(--text-dim); 
-            max-width: 640px; 
-            line-height: 1.6; 
+            max-width: 800px; 
+            line-height: 1.5; 
             margin-bottom: 48px; 
-            position: relative;
-            z-index: 10;
+            animation: fade-in 1.2s var(--ease-out-quart);
         }
 
-        .cta { 
-            padding: 16px 40px; 
-            font-size: 1rem; 
-            font-weight: 600; 
+        .hero-subtitle span { color: #fff; font-weight: 600; }
+
+        .cta-group {
+            display: flex;
+            gap: 16px;
+            animation: fade-in 1.4s var(--ease-out-quart);
+        }
+
+        .cta-primary { 
+            padding: 18px 48px; 
+            font-size: 1.1rem; 
+            font-weight: 700; 
             background: var(--accent); 
             color: white; 
             border: none; 
@@ -143,275 +145,264 @@
             cursor: pointer; 
             text-decoration: none; 
             transition: all 0.3s var(--ease-out-quart); 
-            box-shadow: 0 4px 12px rgba(225, 0, 15, 0.3), inset 0 1px 0 rgba(255,255,255,0.2);
-            position: relative;
-            z-index: 10;
+            box-shadow: 0 8px 24px rgba(225, 0, 15, 0.3), inset 0 1px 0 rgba(255,255,255,0.2);
         }
-        .cta:hover { 
+
+        .cta-primary:hover { 
             background: var(--accent-hover); 
             transform: translateY(-2px); 
-            box-shadow: 0 8px 24px rgba(225, 0, 15, 0.5), inset 0 1px 0 rgba(255,255,255,0.3); 
+            box-shadow: 0 12px 32px rgba(225, 0, 15, 0.5), inset 0 1px 0 rgba(255,255,255,0.3); 
         }
-        
-        /* Bento Grid */
-        .benefits-section { padding: 100px 0; border-top: 1px solid rgba(255,255,255,0.05); }
+
+        .cta-secondary {
+            padding: 18px 48px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            background: var(--glass-surface);
+            color: white;
+            border: 1px solid var(--glass-border);
+            border-radius: 99px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.3s var(--ease-out-quart);
+            backdrop-filter: blur(8px);
+        }
+
+        .cta-secondary:hover {
+            background: rgba(255,255,255,0.08);
+            border-color: rgba(255,255,255,0.2);
+            transform: translateY(-2px);
+        }
+
+        /* Atlas Preview Section */
+        .atlas-preview {
+            width: 100%;
+            height: 600px;
+            margin: 80px 0;
+            border-radius: 32px;
+            background: radial-gradient(circle at center, #151515 0%, #000 100%);
+            border: 1px solid var(--glass-border);
+            position: relative;
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+            animation: fade-in 1.6s var(--ease-out-quart);
+        }
+
+        .atlas-overlay {
+            position: absolute;
+            top: 40px;
+            left: 40px;
+            text-align: left;
+            z-index: 20;
+            pointer-events: none;
+        }
+
+        .atlas-overlay h3 { font-size: 1.5rem; margin: 0 0 8px 0; font-weight: 800; }
+        .atlas-overlay p { color: var(--text-dim); margin: 0; font-family: 'JetBrains Mono'; font-size: 12px; }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            margin: 100px 0;
+        }
+
+        .stat-card { padding: 40px; text-align: left; }
+        .stat-card .val { font-size: 3rem; font-weight: 800; color: #fff; margin-bottom: 8px; line-height: 1; }
+        .stat-card .label { color: var(--text-dim); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 2px; font-weight: 600; }
+
+        /* Targets Gallery */
+        .targets-section { padding: 120px 0; border-top: 1px solid rgba(255,255,255,0.05); }
         .section-label { 
             font-family: 'JetBrains Mono', monospace; 
             font-size: 12px; 
             color: var(--accent); 
             text-transform: uppercase; 
-            letter-spacing: 2px; 
-            margin-bottom: 40px; 
+            letter-spacing: 3px; 
+            margin-bottom: 48px; 
             display: block; 
-            opacity: 0.9;
         }
 
-        .bento-grid {
+        .targets-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
             gap: 24px;
-            margin-top: 20px;
         }
-        
-        .bento-item {
-            padding: 40px;
+
+        .target-card {
+            padding: 32px;
             text-align: left;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            min-height: 180px;
+            text-decoration: none;
+            color: inherit;
         }
 
-        .bento-item h3 { font-size: 1.25rem; font-weight: 700; margin-bottom: 12px; margin-top: 0; letter-spacing: -0.5px; }
-        .bento-item p { font-size: 0.95rem; color: var(--text-dim); line-height: 1.6; margin: 0; }
-        
-        .bento-icon {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 11px;
-            color: var(--accent);
-            margin-bottom: 20px;
-            display: inline-block;
-            padding: 4px 8px;
-            background: rgba(225, 0, 15, 0.1);
-            border-radius: 4px;
-            border: 1px solid rgba(225, 0, 15, 0.2);
-        }
-        
-        .bento-wide { grid-column: span 2; }
-        
-        /* Enterprise Pilot Section */
-        .pilot-section { padding: 120px 0; }
-        
-        .pilot-card { 
-            display: flex; 
-            /* Inherits glass styles via class */
-            overflow: hidden; 
-            text-align: left;
-        }
-        
-        .pilot-content { flex: 1.2; padding: 60px; display: flex; flex-direction: column; justify-content: center; }
-        .pilot-content h2 { font-size: 2.5rem; font-weight: 800; margin-bottom: 16px; margin-top: 0; letter-spacing: -1px; }
-        .pilot-content p { font-size: 1.1rem; color: var(--text-dim); line-height: 1.6; margin-bottom: 40px; max-width: 480px; }
-        
-        .cta-text { 
-            color: #fff; 
-            text-decoration: none; 
-            font-weight: 600; 
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 1rem; 
-            transition: 0.2s; 
-        }
-        .cta-text:hover { color: var(--accent); gap: 12px; }
-        
-        .pilot-visual { 
-            flex: 1; 
-            background: 
-                radial-gradient(circle at center, #151515 0%, #080808 100%);
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            position: relative; 
-            border-left: 1px solid var(--glass-border); 
-        }
-        
-        /* Visual Placeholder Art */
-        .pilot-visual::before {
-            content: '';
-            width: 200px;
-            height: 200px;
-            background: conic-gradient(from 0deg, transparent 0%, var(--accent) 100%);
-            border-radius: 50%;
-            opacity: 0.1;
-            filter: blur(40px);
-            position: absolute;
-        }
-        
-        .pilot-visual::after { 
-            content: "PILOT PREVIEW // 09"; 
-            font-family: 'JetBrains Mono'; 
+        .target-card h3 { font-size: 1.4rem; font-weight: 700; margin: 0 0 12px 0; letter-spacing: -0.5px; }
+        .target-card .badge { 
             font-size: 10px; 
-            color: #555; 
-            letter-spacing: 2px; 
-            z-index: 2;
+            font-family: 'JetBrains Mono'; 
+            padding: 4px 8px; 
+            background: rgba(255,255,255,0.05); 
+            border-radius: 4px; 
+            width: fit-content;
+            color: var(--text-dim);
+            margin-bottom: 24px;
         }
+        .target-card .link-text { color: var(--accent); font-weight: 600; font-size: 0.9rem; margin-top: auto; display: flex; align-items: center; gap: 8px; }
+        .target-card:hover .link-text { gap: 12px; transition: 0.2s; }
 
+        /* Mobile Adjustments */
         @media (max-width: 900px) {
-            .pilot-card { flex-direction: column; }
-            .pilot-content { padding: 40px; }
-            .pilot-visual { height: 300px; border-left: none; border-top: 1px solid var(--glass-border); }
+            .stats-grid { grid-template-columns: 1fr; }
+            .atlas-preview { height: 400px; }
             h1 { font-size: 3.5rem; }
-            .bento-grid { grid-template-columns: repeat(2, 1fr); }
-            .bento-wide { grid-column: span 2; }
         }
 
-        @media (max-width: 600px) {
-            .bento-grid { grid-template-columns: 1fr; }
-            .bento-wide { grid-column: span 1; }
-            h1 { font-size: 2.5rem; }
+        /* 3D Visualizer Mockup */
+        .point-cloud {
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(1px 1px at 20px 30px, #fff, rgba(0,0,0,0)),
+                radial-gradient(1px 1px at 40px 70px, rgba(255,255,255,0.5), rgba(0,0,0,0)),
+                radial-gradient(1px 1px at 50px 160px, #fff, rgba(0,0,0,0)),
+                radial-gradient(1px 1px at 80px 120px, rgba(255,255,255,0.3), rgba(0,0,0,0)),
+                radial-gradient(1px 1px at 110px 10px, rgba(255,255,255,0.7), rgba(0,0,0,0));
+            background-repeat: repeat;
+            background-size: 200px 200px;
+            opacity: 0.4;
+            transform: scale(2);
+            animation: spin-slow 120s linear infinite;
         }
     </style>
 </head>
 <body>
     <div class="hero">
         <div class="container">
-            <h1>Dreams Lab</h1>
-            <p>Molecular intelligence for the next generation of materials. Map chemical space, predict properties, and discover white space with DreaMS.</p>
-            <a href="#benefits" class="cta">Explore Capabilities</a>
+            <div class="hero-badge">NATURE BIOTECHNOLOGY (2025) VALIDATED</div>
+            <h1>87% of chemical data<br>is "dark matter."</h1>
+            <p class="hero-subtitle">Most R&D data stays locked in proprietary silos, invisible and underutilized. <span>DreaMS Lab</span> is the molecular intelligence layer that maps your chemical space in 3D, predicts property "white space," and accelerates discovery by 10x.</p>
+            
+            <div class="cta-group">
+                <a href="#targets" class="cta-primary">Launch Enterprise Pilots</a>
+                <a href="https://github.com/dreams-lab/dreams" class="cta-secondary">Explore Research</a>
+            </div>
+
+            <div class="atlas-preview glass">
+                <div class="atlas-overlay">
+                    <h3>Global Chemical Atlas</h3>
+                    <p>SYSTEM_LOAD: 201,000,000 SPECTRA // REAL-TIME MAPPING</p>
+                </div>
+                <div class="point-cloud"></div>
+                <!-- This would be replaced by the actual 3D viewer in production -->
+                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle, transparent 30%, #000 90%); pointer-events: none;"></div>
+            </div>
         </div>
     </div>
 
-    <!-- Benefits Section -->
-    <section id="benefits" class="benefits-section">
-        <div class="container">
-            <span class="section-label">Capabilities</span>
-            <div class="bento-grid">
-                <!-- Foundation Model -->
-                <div class="glass glass-interactive bento-item bento-wide">
-                    <span class="bento-icon">01 [ Foundation Model ]</span>
-                    <div>
-                        <h3>The Language of Chemistry</h3>
-                        <p>DreaMS is a self-supervised transformer trained on 201 million mass spectra—the largest chemical dataset in existence. It understands the universal syntax of molecules.</p>
-                    </div>
-                </div>
-
-                <!-- Instant Unknowns -->
-                <div class="glass glass-interactive bento-item">
-                    <span class="bento-icon">02 [ Zero-Shot ID ]</span>
-                    <div>
-                        <h3>Instant Unknowns</h3>
-                        <p>Identify novel compounds in seconds without reference standards using our global 3D atlas.</p>
-                    </div>
-                </div>
-
-                <!-- Nature Validation -->
-                <div class="glass glass-interactive bento-item">
-                    <span class="bento-icon">03 [ Peer Reviewed ]</span>
-                    <div>
-                        <h3>Nature Validation</h3>
-                        <p>Our architecture was validated in <i>Nature Biotechnology</i> (May 2025), setting a new benchmark.</p>
-                    </div>
-                </div>
-
-                <!-- 3D Atlas -->
-                <div class="glass glass-interactive bento-item">
-                    <span class="bento-icon">04 [ Interactive ]</span>
-                    <div>
-                        <h3>3D Chemical Atlas</h3>
-                        <p>Navigate proprietary molecules in high-performance 3D. Spot clusters and trends instantly.</p>
-                    </div>
-                </div>
-
-                <!-- White Space -->
-                <div class="glass glass-interactive bento-item">
-                    <span class="bento-icon">05 [ Strategic ]</span>
-                    <div>
-                        <h3>White Space Discovery</h3>
-                        <p>Overlay competitor datasets to identify untapped chemical territories and protect IP.</p>
-                    </div>
-                </div>
-
-                <!-- Digital Lab -->
-                <div class="glass glass-interactive bento-item bento-wide">
-                    <span class="bento-icon">06 [ R&D Efficiency ]</span>
-                    <div>
-                        <h3>Digital Lab Acceleration</h3>
-                        <p>Transform your existing LC-MS fleet into an intelligent discovery engine. Cut reformulation cycles from months to days by navigating your proprietary formulation space in 3D.</p>
-                    </div>
-                </div>
+    <section class="container">
+        <div class="stats-grid">
+            <div class="glass stat-card">
+                <div class="val">201M</div>
+                <div class="label">Mass Spectra Trained</div>
+            </div>
+            <div class="glass stat-card">
+                <div class="val">0.94</div>
+                <div class="label">Retrieval Accuracy</div>
+            </div>
+            <div class="glass stat-card">
+                <div class="val">10x</div>
+                <div class="label">Discovery Velocity</div>
             </div>
         </div>
     </section>
 
-    <!-- Enterprise Pilot Section -->
-    <section class="pilot-section">
+    <section id="targets" class="targets-section">
         <div class="container">
-            <span class="section-label">Enterprise Pilots</span>
-            <div class="glass glass-interactive glass-accent-red pilot-card">
-                <div class="pilot-content">
-                    <h2>Henkel Adhesive Atlas</h2>
-                    <p>A specialized application of DreaMS intelligence mapping thousands of proprietary adhesive formulations into 3D space to accelerate reformulation.</p>
-                    <a href="henkel_lab_demo.html" class="cta-text">Launch Pilot Demo &rarr;</a>
-                </div>
-                <div class="pilot-visual">
-                    <svg width="320" height="320" viewBox="0 0 320 320" fill="none" xmlns="http://www.w3.org/2000/svg" class="pilot-svg">
-                        <defs>
-                            <radialGradient id="grad-red" cx="0.5" cy="0.5" r="0.5">
-                                <stop offset="0%" stop-color="#e1000f" stop-opacity="0.4"/>
-                                <stop offset="100%" stop-color="#e1000f" stop-opacity="0"/>
-                            </radialGradient>
-                            <linearGradient id="grad-scan" x1="0" y1="0" x2="1" y2="1">
-                                <stop offset="0%" stop-color="rgba(255,255,255,0.1)"/>
-                                <stop offset="50%" stop-color="rgba(225,0,15,0.5)"/>
-                                <stop offset="100%" stop-color="rgba(255,255,255,0.1)"/>
-                            </linearGradient>
-                        </defs>
-                        
-                        <!-- Orbital Rings -->
-                        <circle cx="160" cy="160" r="120" stroke="#333" stroke-width="1" opacity="0.5" stroke-dasharray="4 4" />
-                        <circle cx="160" cy="160" r="80" stroke="#444" stroke-width="1" opacity="0.5" />
-                        
-                        <!-- Rotating 3D Cluster Group -->
-                        <g style="transform-origin: 160px 160px; animation: spin-slow 30s linear infinite;">
-                            <!-- Connection Lines -->
-                            <path d="M160 60 L160 260 M60 160 L260 160 M90 90 L230 230 M230 90 L90 230" stroke="rgba(255,255,255,0.05)" stroke-width="1" />
-                            
-                            <!-- Molecules / Nodes -->
-                            <circle cx="160" cy="60" r="3" fill="#666" />
-                            <circle cx="260" cy="160" r="3" fill="#666" />
-                            <circle cx="160" cy="260" r="3" fill="#666" />
-                            <circle cx="60" cy="160" r="3" fill="#666" />
-                            
-                            <!-- Active Red Node -->
-                            <circle cx="230" cy="90" r="5" fill="#e1000f">
-                                <animate attributeName="opacity" values="1;0.4;1" dur="3s" repeatCount="indefinite" />
-                            </circle>
-                            <!-- Highlight Ring -->
-                            <circle cx="230" cy="90" r="12" stroke="#e1000f" stroke-width="1" opacity="0.5">
-                                <animate attributeName="r" values="8;16;8" dur="3s" repeatCount="indefinite" />
-                                <animate attributeName="opacity" values="0.8;0;0.8" dur="3s" repeatCount="indefinite" />
-                            </circle>
+            <span class="section-label">Enterprise Deployment Targets</span>
+            <div class="targets-grid">
+                <!-- Row 1 -->
+                <a href="henkel_lab_demo.html" class="glass glass-interactive target-card">
+                    <div class="badge">ADHESIVES & SEALANTS</div>
+                    <h3>Henkel</h3>
+                    <div class="link-text">Launch Atlas &rarr;</div>
+                </a>
+                <a href="3m_demo.html" class="glass glass-interactive target-card">
+                    <div class="badge">MULTINATIONAL MATERIALS</div>
+                    <h3>3M</h3>
+                    <div class="link-text">Launch Atlas &rarr;</div>
+                </a>
+                <a href="basf_demo.html" class="glass glass-interactive target-card">
+                    <div class="badge">INDUSTRIAL CHEMICALS</div>
+                    <h3>BASF</h3>
+                    <div class="link-text">Launch Atlas &rarr;</div>
+                </a>
+                <a href="dow_demo.html" class="glass glass-interactive target-card">
+                    <div class="badge">PLASTICS & COATINGS</div>
+                    <h3>Dow</h3>
+                    <div class="link-text">Launch Atlas &rarr;</div>
+                </a>
 
-                            <!-- Data Clouds (Subtle) -->
-                            <circle cx="110" cy="210" r="2" fill="#444" />
-                            <circle cx="120" cy="200" r="2" fill="#444" />
-                            <circle cx="100" cy="220" r="2" fill="#444" />
-                        </g>
+                <!-- Row 2 -->
+                <a href="dupont_demo.html" class="glass glass-interactive target-card">
+                    <div class="badge">SPECIALTY MATERIALS</div>
+                    <h3>DuPont</h3>
+                    <div class="link-text">Launch Atlas &rarr;</div>
+                </a>
+                <a href="evonik_demo.html" class="glass glass-interactive target-card">
+                    <div class="badge">SPECIALTY CHEMICALS</div>
+                    <h3>Evonik</h3>
+                    <div class="link-text">Launch Atlas &rarr;</div>
+                </a>
+                <a href="arkema_demo.html" class="glass glass-interactive target-card">
+                    <div class="badge">ADVANCED MATERIALS</div>
+                    <h3>Arkema</h3>
+                    <div class="link-text">Launch Atlas &rarr;</div>
+                </a>
+                <a href="avery_dennison_demo.html" class="glass glass-interactive target-card">
+                    <div class="badge">LABELS & PACKAGING</div>
+                    <h3>Avery Dennison</h3>
+                    <div class="link-text">Launch Atlas &rarr;</div>
+                </a>
 
-                        <!-- Scanning Radar Sweep -->
-                        <g style="transform-origin: 160px 160px; animation: spin-slow 8s linear infinite reverse;">
-                            <circle cx="160" cy="160" r="100" stroke="url(#grad-red)" stroke-width="20" stroke-dasharray="60 600" stroke-linecap="round" opacity="0.3" style="filter: blur(4px);" />
-                        </g>
-
-                        <!-- Center Core -->
-                        <circle cx="160" cy="160" r="40" fill="url(#grad-red)" opacity="0.2">
-                             <animate attributeName="r" values="30;50;30" dur="4s" repeatCount="indefinite" />
-                        </circle>
-                        <circle cx="160" cy="160" r="4" fill="#fff" />
-                    </svg>
-                </div>
+                <!-- Row 3 -->
+                <a href="covestro_demo.html" class="glass glass-interactive target-card">
+                    <div class="badge">POLYURETHANES</div>
+                    <h3>Covestro</h3>
+                    <div class="link-text">Launch Atlas &rarr;</div>
+                </a>
+                <a href="ppg_demo.html" class="glass glass-interactive target-card">
+                    <div class="badge">PAINTS & COATINGS</div>
+                    <h3>PPG</h3>
+                    <div class="link-text">Launch Atlas &rarr;</div>
+                </a>
+                <a href="syensqo_demo.html" class="glass glass-interactive target-card">
+                    <div class="badge">SPECIALTY POLYMERS</div>
+                    <h3>Syensqo</h3>
+                    <div class="link-text">Launch Atlas &rarr;</div>
+                </a>
+                <a href="akzonobel_demo.html" class="glass glass-interactive target-card">
+                    <div class="badge">PERFORMANCE COATINGS</div>
+                    <h3>AkzoNobel</h3>
+                    <div class="link-text">Launch Atlas &rarr;</div>
+                </a>
+                <a href="clariant_demo.html" class="glass glass-interactive target-card">
+                    <div class="badge">CARE CHEMICALS</div>
+                    <h3>Clariant</h3>
+                    <div class="link-text">Launch Atlas &rarr;</div>
+                </a>
             </div>
         </div>
     </section>
+
+    <footer style="padding: 80px 0; color: var(--text-dim); font-family: 'JetBrains Mono'; font-size: 12px; border-top: 1px solid rgba(255,255,255,0.05); margin-top: 100px;">
+        <div class="container">
+            <p>&copy; 2026 DreaMS Lab. All Rights Reserved. Built on DreaMS Foundation Model.</p>
+        </div>
+    </footer>
 </body>
 </html>

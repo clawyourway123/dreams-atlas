@@ -8,19 +8,10 @@ import json
 import os
 from pathlib import Path
 
+from contextlib import asynccontextmanager
+
 # Resolve the project root (one level up from backend/)
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-
-app = FastAPI()
-
-# Enable CORS for API access
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # ---------------------------------------------------------------------------
 # FAISS / Search Backend
@@ -45,7 +36,8 @@ def load_data():
             print(f"Loaded {vectors.shape[0]} vectors with {vectors.shape[1]} dimensions.")
         else:
             print("Warning: embeddings_checkpoint.npy not found. Using mock data.")
-            vectors = np.random.rand(5000, 1024).astype("float32")
+            # Use smaller mock data to save memory on free tier
+            vectors = np.random.rand(1000, 512).astype("float32")
 
         # Load ID mapping from atlas_data.json
         if atlas_path.exists():
@@ -70,10 +62,29 @@ def load_data():
     except Exception as e:
         print(f"Error loading data: {e}")
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Load data on startup
+    load_data()
+    yield
+    # Clean up (if needed)
+    pass
 
-# Initialize on startup
-load_data()
+app = FastAPI(lifespan=lifespan)
 
+# Enable CORS for API access
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.get("/healthz")
+def healthz():
+    return {"status": "alive"}
 
 # ---------------------------------------------------------------------------
 # API Routes (under /api/)
