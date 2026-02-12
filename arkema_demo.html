@@ -1,32 +1,48 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Arkema Chemical Space Atlas</title>
+    <title>Arkema Chemical Space Atlas (Enterprise Lab)</title>
     <script src="https://cdn.plot.ly/plotly-2.35.0.min.js"></script>
     <link rel="stylesheet" href="atlas.css">
+    <style>
+      .sidebar.collapsed {
+        transform: translateX(-320px);
+      }
+      .sidebar.collapsed ~ .main-view {
+        margin-left: 0 !important;
+      }
+      .details-overlay {
+        position: fixed;
+        top: 70px;
+        right: 20px;
+        max-width: 260px;
+        z-index: 10;
+      }
+      #sidebar-toggle.mobile-toggle {
+        display: block !important;
+      }
+    </style>
 </head>
 <body>
 <div id="loading-overlay">
     <div class="loader" style="display:block"></div>
-    <div style="margin-top:10px;color:#888;font-size:12px;font-family:'Inter',sans-serif">Loading Atlas...</div>
+    <div style="margin-top:10px;color:#888;font-size:12px;font-family:'Inter',sans-serif">Loading Arkema Atlas (Lab / FAISS)...</div>
 </div>
 
 <button id="sidebar-toggle" class="mobile-toggle">☰</button>
 
-
 <div class="sidebar">
-    <h1>Arkema / Atlas</h1>
-    
+    <h1>Arkema / Atlas (Lab)</h1>
+
     <div class="stat-card">
-        <div class="stat-val">24,593</div>
-        <div class="stat-label">Proprietary Spectra Mapped</div>
+        <div class="stat-val">7,112</div>
+        <div class="stat-label">Proprietary Advanced Materials Mapped</div>
     </div>
     <div class="stat-card">
-        <div class="stat-val">89.2%</div>
-        <div class="stat-label">Coverage of Chemical Space</div>
+        <div class="stat-val">FAISS</div>
+        <div class="stat-label">Backend: dreams-atlas.onrender.com</div>
     </div>
 
     <h2>Controls</h2>
@@ -36,37 +52,52 @@
             <option>Viscosity</option>
             <option>Cure Speed</option>
             <option>Shear Strength</option>
+            <option>Molecular Weight</option>
         </select>
     </div>
 
-    <h2>Similarity</h2>
+    <h2>Similarity (Lab)</h2>
     <div class="stat-card">
         <label style="font-size: 12px; color: #aaa; display: block; margin-bottom: 5px;">Anchor Spectrum</label>
         <select id="specSelect" style="width: 100%; background: #111; color: #fff; border: 1px solid #444; padding: 5px; border-radius: 4px;">
             <option>Loading spectra...</option>
         </select>
-        <button class="btn" style="margin-top: 10px;" onclick="highlightSimilar()">Find Most Similar</button>
+        <p style="margin-top:8px; font-size:11px; color:#888; line-height:1.4;">
+            Lab mode: clicking a point or changing this dropdown will hit the FAISS backend first,
+            then fall back to local 3D similarity if needed.
+        </p>
     </div>
-
-    <button class="btn" onclick="uploadDataset()">
-        <span id="btnText">Upload New Batch (.mgf)</span>
-        <div class="loader" id="loader"></div>
-    </button>
-    <input type="file" id="fileUpload" style="display:none" accept=".mgf,.txt,.csv" onchange="handleFile(this)">
 
     <div style="margin-top: 30px; border-top: 1px solid #333; padding-top: 20px;">
         <h2>What you're seeing</h2>
         <ul style="font-size: 12px; color: #aaa; padding-left: 15px; line-height: 1.6;">
-            <li style="margin-bottom: 8px;"><strong>24,000+ Spectra:</strong> Complete map of Arkema proprietary adhesive formulations.</li>
-            <li style="margin-bottom: 8px;"><strong>AI Similarity:</strong> Distance equals chemical relatedness; clusters show property groups.</li>
-            <li><strong>Interactive:</strong> Rotate, zoom, and click to explore the manifold.</li>
+            <li style="margin-bottom: 8px;"><strong>DreaMS Atlas (Lab):</strong> High-fidelity manifold of Arkema's proprietary chemical space.</li>
+            <li style="margin-bottom: 8px;"><strong>FAISS Similarity:</strong> Real-time neighborhood ranking via the DreaMS foundation model.</li>
+            <li style="margin-bottom: 8px;"><strong>Strategic Insight:</strong> Built for R&D leaders to identify "white space" for IP protection.</li>
         </ul>
     </div>
 </div>
 
 <div class="main-view" id="scatter3d"></div>
 
-<script src="atlas-viewer.js"></script>
+<div class="details-overlay">
+  <div id="details-panel" class="stat-card" style="display:none; border-top: 1px solid #333;">
+      <label style="font-size: 12px; color: #aaa; display: block; margin-bottom: 5px;">Selected Spectrum</label>
+      <div id="detail-id" style="font-weight:bold; color:#fff; word-break:break-all; margin-bottom:5px;"></div>
+      <div style="display:flex; justify-content:space-between; font-size:12px; color:#aaa;">
+          <span>Cluster: <span id="detail-cluster" style="color:#fff;"></span></span>
+      </div>
+      <div style="margin-top:5px; font-size:11px; font-family:monospace; color:#666;">
+          XYZ: <span id="detail-xyz"></span>
+      </div>
+      <div style="margin-top:8px; font-size:11px; color:#aaa;">
+          Most similar (top 10):
+          <ol id="detail-neighbors" style="margin:4px 0 0; padding-left:16px; max-height:160px; overflow-y:auto;"></ol>
+      </div>
+  </div>
+</div>
+
+<script src="atlas-viewer-lab.js"></script>
 
 </body>
 </html>
