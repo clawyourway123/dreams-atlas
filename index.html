@@ -4,16 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DreaMS Lab | Molecular Intelligence for Enterprise Discovery</title>
+    <script>
+        // Prevent flash of wrong theme on load
+        (function() {
+            var saved = localStorage.getItem('dreams-theme');
+            if (!saved) saved = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', saved);
+        })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <style>
-        :root {
+        :root, [data-theme="dark"] {
             --accent: #e1000f;
             --accent-hover: #ff1a2b;
             --bg-deep: #0a0a0a;
+            --bg-body: #000;
+            --bg-body-gradient: radial-gradient(circle at 50% 0%, #1a1a1a 0%, #000 60%);
             --text-main: #ffffff;
             --text-dim: #a1a1aa;
+            --hero-gradient-from: #fff;
+            --hero-gradient-to: #a1a1aa;
             
             /* Glass System */
             --glass-surface: rgba(255, 255, 255, 0.03);
@@ -27,8 +39,39 @@
             --shadow-lg: 0 24px 48px -12px rgba(0,0,0,0.7), 0 12px 24px -6px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
             --shadow-red: 0 20px 40px -10px rgba(225, 0, 15, 0.15), inset 0 0 20px rgba(225, 0, 15, 0.05);
 
+            /* Point cloud */
+            --cloud-opacity: 0.4;
+            --vignette-color: #000;
+            --footer-border: rgba(255,255,255,0.05);
+
             /* Animations */
             --ease-out-quart: cubic-bezier(0.165, 0.84, 0.44, 1);
+        }
+
+        [data-theme="light"] {
+            --accent: #c5000d;
+            --accent-hover: #e1000f;
+            --bg-deep: #f5f5f7;
+            --bg-body: #ffffff;
+            --bg-body-gradient: radial-gradient(circle at 50% 0%, #f0f0f5 0%, #fff 60%);
+            --text-main: #1d1d1f;
+            --text-dim: #6e6e73;
+            --hero-gradient-from: #1d1d1f;
+            --hero-gradient-to: #6e6e73;
+
+            --glass-surface: rgba(0, 0, 0, 0.02);
+            --glass-border: rgba(0, 0, 0, 0.08);
+            --glass-highlight: rgba(0, 0, 0, 0.06);
+            --glass-blur: 20px;
+
+            --shadow-sm: 0 2px 6px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+            --shadow-md: 0 8px 20px -4px rgba(0,0,0,0.1), 0 4px 8px -2px rgba(0,0,0,0.06);
+            --shadow-lg: 0 20px 40px -8px rgba(0,0,0,0.15), 0 8px 16px -4px rgba(0,0,0,0.08);
+            --shadow-red: 0 16px 32px -8px rgba(225, 0, 15, 0.12);
+
+            --cloud-opacity: 0.15;
+            --vignette-color: #fff;
+            --footer-border: rgba(0,0,0,0.06);
         }
 
         @keyframes spin-slow { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -37,15 +80,14 @@
         body { 
             margin: 0; 
             font-family: 'Inter', sans-serif; 
-            background-color: #000;
-            background-image: 
-                radial-gradient(circle at 50% 0%, #1a1a1a 0%, #000 60%),
-                url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+            background-color: var(--bg-body);
+            background-image: var(--bg-body-gradient);
             color: var(--text-main); 
             text-align: center; 
             scroll-behavior: smooth;
             -webkit-font-smoothing: antialiased;
             overflow-x: hidden;
+            transition: background-color 0.4s ease, color 0.4s ease;
         }
 
         .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 10; }
@@ -78,15 +120,47 @@
             position: absolute;
             top: 0; left: 0; right: 0;
             height: 1px;
-            background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%);
+            background: linear-gradient(90deg, transparent 0%, var(--glass-highlight) 50%, transparent 100%);
             opacity: 0.5;
             pointer-events: none;
         }
 
+        /* Theme Toggle Button */
+        .theme-toggle {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 1000;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 1px solid var(--glass-border);
+            background: var(--glass-surface);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: all 0.3s var(--ease-out-quart);
+            box-shadow: var(--shadow-sm);
+            color: var(--text-main);
+        }
+        .theme-toggle:hover {
+            transform: scale(1.1);
+            border-color: var(--glass-highlight);
+            box-shadow: var(--shadow-md);
+        }
+        .theme-toggle .icon-sun { display: none; }
+        .theme-toggle .icon-moon { display: block; }
+        [data-theme="light"] .theme-toggle .icon-sun { display: block; }
+        [data-theme="light"] .theme-toggle .icon-moon { display: none; }
+
         .glass-interactive:hover {
             transform: translateY(-6px) scale(1.005);
             box-shadow: var(--shadow-md);
-            border-color: rgba(255,255,255,0.15);
+            border-color: var(--glass-highlight);
         }
 
         /* Hero Section */
@@ -119,8 +193,9 @@
             font-size: clamp(3rem, 10vw, 5.5rem); 
             font-weight: 800; 
             margin: 0 0 24px 0; 
-            background: linear-gradient(180deg, #fff 0%, #a1a1aa 100%); 
+            background: linear-gradient(180deg, var(--hero-gradient-from) 0%, var(--hero-gradient-to) 100%); 
             -webkit-background-clip: text; 
+            background-clip: text;
             color: transparent; 
             letter-spacing: -3px; 
             line-height: 1;
@@ -155,13 +230,13 @@
             cursor: pointer; 
             text-decoration: none; 
             transition: all 0.3s var(--ease-out-quart); 
-            box-shadow: 0 8px 24px rgba(225, 0, 15, 0.3), inset 0 1px 0 rgba(255,255,255,0.2);
+            box-shadow: var(--shadow-red);
         }
 
         .cta-primary:hover { 
             background: var(--accent-hover); 
             transform: translateY(-2px); 
-            box-shadow: 0 12px 32px rgba(225, 0, 15, 0.5), inset 0 1px 0 rgba(255,255,255,0.3); 
+            box-shadow: 0 12px 32px rgba(225, 0, 15, 0.4);
         }
 
         .cta-secondary {
@@ -169,7 +244,7 @@
             font-size: 1.1rem;
             font-weight: 600;
             background: var(--glass-surface);
-            color: white;
+            color: var(--text-main);
             border: 1px solid var(--glass-border);
             border-radius: 99px;
             cursor: pointer;
@@ -179,8 +254,8 @@
         }
 
         .cta-secondary:hover {
-            background: rgba(255,255,255,0.08);
-            border-color: rgba(255,255,255,0.2);
+            background: var(--glass-highlight);
+            border-color: var(--glass-highlight);
             transform: translateY(-2px);
         }
 
@@ -190,7 +265,7 @@
             height: 600px;
             margin: 80px 0;
             border-radius: 32px;
-            background: radial-gradient(circle at center, #151515 0%, #000 100%);
+            background: radial-gradient(circle at center, var(--bg-deep) 0%, var(--bg-body) 100%);
             border: 1px solid var(--glass-border);
             position: relative;
             overflow: hidden;
@@ -219,11 +294,11 @@
         }
 
         .stat-card { padding: 40px; text-align: left; }
-        .stat-card .val { font-size: 3rem; font-weight: 800; color: #fff; margin-bottom: 8px; line-height: 1; }
+        .stat-card .val { font-size: 3rem; font-weight: 800; color: var(--text-main); margin-bottom: 8px; line-height: 1; }
         .stat-card .label { color: var(--text-dim); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 2px; font-weight: 600; }
 
         /* Targets Gallery */
-        .targets-section { padding: 120px 0; border-top: 1px solid rgba(255,255,255,0.05); }
+        .targets-section { padding: 120px 0; border-top: 1px solid var(--footer-border); }
         .section-label { 
             font-family: 'JetBrains Mono', monospace; 
             font-size: 12px; 
@@ -256,7 +331,7 @@
             font-size: 10px; 
             font-family: 'JetBrains Mono'; 
             padding: 4px 8px; 
-            background: rgba(255,255,255,0.05); 
+            background: var(--glass-surface); 
             border-radius: 4px; 
             width: fit-content;
             color: var(--text-dim);
@@ -284,13 +359,17 @@
                 radial-gradient(1px 1px at 110px 10px, rgba(255,255,255,0.7), rgba(0,0,0,0));
             background-repeat: repeat;
             background-size: 200px 200px;
-            opacity: 0.4;
+            opacity: var(--cloud-opacity);
             transform: scale(2);
             animation: spin-slow 120s linear infinite;
         }
     </style>
 </head>
 <body>
+    <button class="theme-toggle" aria-label="Toggle dark/light mode" title="Toggle theme">
+        <span class="icon-moon">🌙</span>
+        <span class="icon-sun">☀️</span>
+    </button>
     <div class="hero">
         <div class="container">
             <div class="hero-badge">NATURE BIOTECHNOLOGY (2025) VALIDATED</div>
@@ -309,7 +388,7 @@
                 </div>
                 <div class="point-cloud"></div>
                 <!-- This would be replaced by the actual 3D viewer in production -->
-                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle, transparent 30%, #000 90%); pointer-events: none;"></div>
+                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle, transparent 30%, var(--vignette-color) 90%); pointer-events: none;"></div>
             </div>
         </div>
     </div>
@@ -409,7 +488,7 @@
         </div>
     </section>
 
-    <footer style="padding: 80px 0; color: var(--text-dim); font-family: 'JetBrains Mono'; font-size: 12px; border-top: 1px solid rgba(255,255,255,0.05); margin-top: 100px;">
+    <footer style="padding: 80px 0; color: var(--text-dim); font-family: 'JetBrains Mono'; font-size: 12px; border-top: 1px solid var(--footer-border); margin-top: 100px;">
         <div class="container">
             <p>&copy; 2026 DreaMS Lab. All Rights Reserved. Built on DreaMS Foundation Model.</p>
         </div>
@@ -456,6 +535,41 @@
                 trackEvent('link_click', { href: link.href, text: link.innerText });
             });
         });
+
+        // Dark/Light Theme Toggle with localStorage persistence
+        (function() {
+            const toggle = document.querySelector('.theme-toggle');
+            const html = document.documentElement;
+            
+            // Check saved preference, then system preference
+            function getPreferredTheme() {
+                const saved = localStorage.getItem('dreams-theme');
+                if (saved) return saved;
+                return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+            }
+
+            function setTheme(theme) {
+                html.setAttribute('data-theme', theme);
+                localStorage.setItem('dreams-theme', theme);
+            }
+
+            // Apply saved theme immediately (no flash)
+            setTheme(getPreferredTheme());
+
+            toggle.addEventListener('click', () => {
+                const current = html.getAttribute('data-theme') || 'dark';
+                const next = current === 'dark' ? 'light' : 'dark';
+                setTheme(next);
+                trackEvent('theme_toggle', { theme: next });
+            });
+
+            // Listen for OS theme changes
+            window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {
+                if (!localStorage.getItem('dreams-theme')) {
+                    setTheme(e.matches ? 'light' : 'dark');
+                }
+            });
+        })();
     </script>
 </body>
 </html>

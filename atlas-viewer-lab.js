@@ -31,6 +31,7 @@ let labIndicesBuffer = null;
 
 // Track current selection
 let labCurrentSelectedId = null;
+let lastSearchResults = [];
 
 // Minimal fallbacks so the lab viewer can run standalone without relying
 // on functions from the stable viewer file.
@@ -245,6 +246,7 @@ async function labHighlightSimilarFAISS(id) {
         const data = await res.json();
         if (data && Array.isArray(data.results) && data.results.length) {
             neighborIds = data.results.map(r => r.id);
+            lastSearchResults = data.results;
         }
     } catch (err) {
         console.warn('FAISS backend failed, falling back to local similarity:', err);
@@ -267,6 +269,7 @@ async function labHighlightSimilarFAISS(id) {
         const arr = Array.from(labIndicesBuffer);
         arr.sort((a, b) => labDistsBuffer[a] - labDistsBuffer[b]);
         neighborIds = arr.slice(0, 20).map(i => labAtlasData[i].id);
+        lastSearchResults = neighborIds.map((nid, i) => ({ id: nid, score: 1.0 / (1.0 + labDistsBuffer[arr[i]]) }));
     }
 
     trackEvent('search_complete', { id, mode, count: neighborIds.length });
@@ -307,3 +310,78 @@ async function labHighlightSimilarFAISS(id) {
         'marker.size': [hSize]
     }, [1]);
 }
+
+function exportResultsAsCSV() {
+    if (!labAtlasData.length || !labCurrentSelectedId) {
+        alert("Please select a spectrum first.");
+        return;
+    }
+    
+    if (!lastSearchResults || !lastSearchResults.length) {
+        alert("No search results to export.");
+        return;
+    }
+
+    let csv = "Rank,ID,Score,X,Y,Z\n";
+    lastSearchResults.forEach((r, i) => {
+        const idx = labIdToIdx.get(r.id);
+        if (idx !== undefined) {
+            const d = labAtlasData[idx];
+            csv += `${i+1},"${r.id}",${r.score.toFixed(6)},${d.x.toFixed(4)},${d.y.toFixed(4)},${d.z.toFixed(4)}\n`;
+        }
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.setAttribute('hidden', '');
+    a.setAttribute('href', url);
+    a.setAttribute('download', `DreaMS_Search_${labCurrentSelectedId}.csv`);
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    
+    trackEvent('export_csv', { id: labCurrentSelectedId, count: lastSearchResults.length });
+}
+
+function shareView() {
+    if (!labCurrentSelectedId) {
+        alert("Please select a spectrum to share.");
+        return;
+    }
+    const url = new URL(window.location.href);
+    url.searchParams.set('id', labCurrentSelectedId);
+    
+    navigator.clipboard.writeText(url.toString()).then(() => {
+        alert("Link copied to clipboard! You can share this specific view with your team.");
+    }).catch(err => {
+        console.error('Could not copy text: ', err);
+    });
+    
+    trackEvent('share_view', { id: labCurrentSelectedId });
+}
+
+// Handle incoming share links
+function handleIncomingShare() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const id = urlParams.get('id');
+    if (id) {
+        // Wait a bit for data to load
+        const checkData = setInterval(() => {
+            if (labAtlasData.length && labIdToIdx.has(id)) {
+                clearInterval(checkData);
+                labCurrentSelectedId = id;
+                const select = document.getElementById('specSelect');
+                if (select) select.value = id;
+                updateLabDetails(id);
+                labHighlightSimilarFAISS(id);
+            }
+        }, 500);
+        // Timeout after 10s
+        setTimeout(() => clearInterval(checkData), 10000);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', handleIncomingShare);
+
+
