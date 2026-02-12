@@ -2,6 +2,8 @@
 
 Phase 6 hardening: rate limiting, input validation, request logging,
 LRU caching, and graceful degradation.
+
+v2.1 — 2026-02-12: 5000 mock vectors matching atlas_data.json, regex fix.
 """
 
 import json
