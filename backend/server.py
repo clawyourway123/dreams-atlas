@@ -455,6 +455,111 @@ def safety_sds(id: str):
     }
 
 # ---------------------------------------------------------------------------
+# Phase 21: High-Throughput Screening (HTS) & Assay Data Fusion
+# ---------------------------------------------------------------------------
+@app.get("/api/hts/assay")
+def hts_assay(id: str):
+    """Mock HTS Assay data (Dose-response, IC50)."""
+    clean_id = validate_search_id(id)
+    h = hash(clean_id)
+    
+    # Generate mock dose-response points
+    doses = [0.01, 0.1, 1.0, 10.0, 100.0]
+    # Simple sigmoid: 100 / (1 + (dose/IC50)^slope)
+    ic50 = 0.5 + (h % 50) / 10.0
+    slope = 1.0
+    responses = [round(100 / (1 + (d/ic50)**slope), 2) for d in doses]
+    
+    return {
+        "id": clean_id,
+        "assay_type": "Kinase Inhibition (Mock)",
+        "ic50_um": ic50,
+        "unit": "uM",
+        "dose_response": {
+            "doses": doses,
+            "responses": responses
+        },
+        "outlier_status": "NORMAL" if (h % 20) > 0 else "FLAGGED_OUTLIER"
+    }
+
+@app.get("/api/hts/sar")
+def hts_sar_map(cluster_id: int = 0):
+    """Mock SAR heatmap data for a chemical cluster."""
+    # Return mock IDs and their assay activities
+    results = []
+    for i in range(10):
+        mock_id = f"MOL_{cluster_id}_{i}"
+        results.append({
+            "id": mock_id,
+            "activity": round(10 + (hash(mock_id) % 90), 2),
+            "status": "active" if (hash(mock_id) % 100) > 70 else "inactive"
+        })
+    return {"cluster": cluster_id, "data": results}
+
+# ---------------------------------------------------------------------------
+# Phase 22: Sustainable Chemistry & Green Synthesis Score
+# ---------------------------------------------------------------------------
+@app.get("/api/sustainability/score")
+def sustainability_score(id: str):
+    """Sustainability and Green Chemistry scoring (Mock)."""
+    clean_id = validate_search_id(id)
+    h = hash(clean_id)
+    
+    atom_economy = round(70 + (h % 30), 2)
+    e_factor = round(5 + (h % 95), 1)
+    
+    # Inventory check
+    inventory = ["Acetone", "Ethanol"] if (h % 2) == 0 else ["DCM", "THF", "Toluene"]
+    
+    return {
+        "id": clean_id,
+        "green_score": round((atom_economy / 100.0) * (1.0 - (e_factor / 200.0)) * 100, 1),
+        "metrics": {
+            "atom_economy": f"{atom_economy}%",
+            "e_factor": e_factor,
+            "solvent_safety": "High" if e_factor < 20 else "Moderate",
+            "carbon_footprint": f"{round(e_factor * 0.5, 2)} kg CO2/kg"
+        },
+        "inventory_reagents": inventory,
+        "status": "GREEN" if atom_economy > 85 and e_factor < 15 else "STANDARD"
+    }
+
+# ---------------------------------------------------------------------------
+# Phase 23: Global R&D Collaboration & IP Management
+# ---------------------------------------------------------------------------
+@app.get("/api/ip/check")
+def ip_check(id: str):
+    """Mock IP/Patent check and Freedom to Operate (FTO)."""
+    clean_id = validate_search_id(id)
+    h = hash(clean_id)
+    
+    # Simulate patent matches
+    patents = []
+    if h % 5 == 0:
+        patents.append({"id": f"US-{h % 10000000}-B2", "assignee": "Competitor Pharma", "status": "Active"})
+    
+    return {
+        "id": clean_id,
+        "fto_status": "CLEAR" if not patents else "POTENTIAL_CONFLICT",
+        "matches": patents,
+        "novelty_score": round(0.7 + (h % 30) / 100.0, 2),
+        "ip_protection_recommendation": "File Provisional" if not patents else "Redesign Scaffold"
+    }
+
+@app.post("/api/collaboration/sign")
+async def collaboration_sign(request: Request):
+    """Mock E-signature for experimental sign-off."""
+    try:
+        data = await request.json()
+        logger.info(f"COLLAB SIGN: {data.get('user')} signed off on {data.get('id')}")
+        return {
+            "status": "success",
+            "signature_id": f"SIG-{int(time.time())}",
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        }
+    except: return {"status": "error"}
+
+# ---------------------------------------------------------------------------
 # Static Files
 # ---------------------------------------------------------------------------
 @app.get("/")

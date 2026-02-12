@@ -200,11 +200,110 @@ async function updateLabDetails(spectrumId) {
     if (idEl) idEl.textContent = anchor.id;
     if (clEl) clEl.textContent = anchor.cluster;
     if (xyzEl) xyzEl.textContent = `${anchor.x.toFixed(1)}, ${anchor.y.toFixed(1)}, ${anchor.z.toFixed(1)}`;
+    
+    // FETCH INTELLIGENCE DATA
+    fetchIPData(spectrumId);
+    fetchHTSData(spectrumId);
+    fetchSustainabilityScore(spectrumId);
+    fetchSafetyScore(spectrumId);
+
     try {
         const res = await fetch(`${FAISS_BASE_URL}/api/molecule/smiles?id=${encodeURIComponent(spectrumId)}`);
         const data = await res.json();
         if (data.smiles) drawMolecule(data.smiles);
     } catch (e) {}
+}
+
+async function fetchIPData(id) {
+    let panel = document.getElementById('ip-panel');
+    if (!panel) {
+        const detailsOverlay = document.querySelector('.details-overlay');
+        if (!detailsOverlay) return;
+        panel = document.createElement('div');
+        panel.id = 'ip-panel';
+        panel.className = 'stat-card';
+        panel.style.cssText = "margin-top: 10px; border-top: 1px solid var(--border-color);";
+        detailsOverlay.appendChild(panel);
+    }
+    panel.style.display = 'block';
+    try {
+        const res = await fetch(`${FAISS_BASE_URL}/api/ip/check?id=${encodeURIComponent(id)}`);
+        const data = await res.json();
+        panel.innerHTML = `
+            <label style="font-size: 12px; color: var(--text-dim); display: block; margin-bottom: 8px;">IP Management (Phase 23)</label>
+            <div style="font-size:11px; margin-bottom:4px;">FTO Status: <span style="color:#00ff88; font-weight:bold;">${data.fto_status}</span></div>
+            <div style="font-size:10px; color:var(--text-dim);">Rec: ${data.ip_protection_recommendation}</div>
+        `;
+    } catch (e) { panel.style.display = 'none'; }
+}
+
+async function fetchHTSData(id) {
+    let panel = document.getElementById('hts-panel');
+    if (!panel) {
+        const detailsOverlay = document.querySelector('.details-overlay');
+        if (!detailsOverlay) return;
+        panel = document.createElement('div');
+        panel.id = 'hts-panel';
+        panel.className = 'stat-card';
+        panel.style.cssText = "margin-top: 10px; border-top: 1px solid var(--border-color);";
+        detailsOverlay.appendChild(panel);
+    }
+    panel.style.display = 'block';
+    try {
+        const res = await fetch(`${FAISS_BASE_URL}/api/hts/assay?id=${encodeURIComponent(id)}`);
+        const data = await res.json();
+        panel.innerHTML = `
+            <label style="font-size: 12px; color: var(--text-dim); display: block; margin-bottom: 8px;">HTS Assay Intelligence (Phase 21)</label>
+            <div style="font-size:11px; color:var(--header-text); font-weight:bold;">${data.assay_type}</div>
+            <div style="font-size:11px; color:var(--text-dim);">IC50: <span style="color:var(--accent); font-weight:bold;">${data.ic50_um} ${data.unit}</span></div>
+        `;
+    } catch (e) { panel.style.display = 'none'; }
+}
+
+async function fetchSustainabilityScore(id) {
+    let panel = document.getElementById('sustainability-panel');
+    if (!panel) {
+        const detailsOverlay = document.querySelector('.details-overlay');
+        if (!detailsOverlay) return;
+        panel = document.createElement('div');
+        panel.id = 'sustainability-panel';
+        panel.className = 'stat-card';
+        panel.style.cssText = "margin-top: 10px; border-top: 1px solid var(--border-color);";
+        detailsOverlay.appendChild(panel);
+    }
+    panel.style.display = 'block';
+    try {
+        const res = await fetch(`${FAISS_BASE_URL}/api/sustainability/score?id=${encodeURIComponent(id)}`);
+        const data = await res.json();
+        panel.innerHTML = `
+            <label style="font-size: 12px; color: var(--text-dim); display: block; margin-bottom: 8px;">Sustainability (Phase 22)</label>
+            <div style="font-size:16px; font-weight:bold; color:#00ff88;">${data.green_score}% Green Score</div>
+            <div style="font-size:10px; color:var(--text-dim); margin-top:4px;">Atom Economy: ${data.metrics.atom_economy}</div>
+        `;
+    } catch (e) { panel.style.display = 'none'; }
+}
+
+async function fetchSafetyScore(id) {
+    let panel = document.getElementById('safety-panel');
+    if (!panel) {
+        const detailsOverlay = document.querySelector('.details-overlay');
+        if (!detailsOverlay) return;
+        panel = document.createElement('div');
+        panel.id = 'safety-panel';
+        panel.className = 'stat-card';
+        panel.style.cssText = "margin-top: 10px; border-top: 1px solid var(--border-color);";
+        detailsOverlay.appendChild(panel);
+    }
+    panel.style.display = 'block';
+    try {
+        const res = await fetch(`${FAISS_BASE_URL}/api/safety/score?id=${encodeURIComponent(id)}`);
+        const data = await res.json();
+        panel.innerHTML = `
+            <label style="font-size: 12px; color: var(--text-dim); display: block; margin-bottom: 8px;">Safety Intelligence (Phase 20)</label>
+            <div style="font-size:14px; font-weight:bold; color:var(--accent);">${(data.tox21_safety_score * 100).toFixed(0)}% Tox21 Score</div>
+            <div style="font-size:11px; margin-top:4px;">ClinTox: <span style="color:#00ff88;">${data.clintox_status}</span></div>
+        `;
+    } catch (e) { panel.style.display = 'none'; }
 }
 
 async function labHighlightSimilarFAISS(id) {
@@ -261,7 +360,7 @@ function exportResultsAsCSV() {
         const idx = labIdToIdx.get(r.id);
         if (idx !== undefined) {
             const d = labAtlasData[idx];
-            csv += `${i+1},"${r.id}",${r.score.toFixed(6)},${d.x.toFixed(4)},${d.y.toFixed(4)},${d.z.toFixed(4)}\n`;
+            csv+=`${i+1},"${r.id}",${r.score.toFixed(6)},${d.x.toFixed(4)},${d.y.toFixed(4)},${d.z.toFixed(4)}\n`;
         }
     });
     const blob = new Blob([csv], { type: 'text/csv' });
