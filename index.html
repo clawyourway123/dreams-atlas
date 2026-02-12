@@ -60,7 +60,17 @@
             border-radius: 24px;
             position: relative;
             overflow: hidden;
-            transition: transform 0.4s var(--ease-out-quart), box-shadow 0.4s var(--ease-out-quart), border-color 0.4s ease;
+            transition: transform 0.4s var(--ease-out-quart), box-shadow 0.4s var(--ease-out-quart), border-color 0.4s ease, opacity 0.6s ease, transform 0.6s var(--ease-out-quart);
+        }
+
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
         }
 
         .glass::before {
@@ -404,5 +414,48 @@
             <p>&copy; 2026 DreaMS Lab. All Rights Reserved. Built on DreaMS Foundation Model.</p>
         </div>
     </footer>
+
+    <script>
+        // Intersection Observer for Lazy Reveal
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.target-card, .stat-card').forEach(el => {
+            el.classList.add('reveal');
+            observer.observe(el);
+        });
+
+        // Simple Analytics for Index Page
+        const FAISS_BASE_URL = "https://dreams-atlas.onrender.com";
+        async function trackEvent(event, meta = {}) {
+            try {
+                await fetch(`${FAISS_BASE_URL}/api/track`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        event,
+                        meta: { ...meta, url: window.location.href, ua: navigator.userAgent }
+                    })
+                });
+            } catch (e) {}
+        }
+        trackEvent('index_view');
+        document.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', () => {
+                trackEvent('link_click', { href: link.href, text: link.innerText });
+            });
+        });
+    </script>
 </body>
 </html>

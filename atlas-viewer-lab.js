@@ -59,9 +59,31 @@ if (typeof hideLoadingOverlay !== 'function') {
     }
 }
 
+// Analytics Helper
+async function trackEvent(event, meta = {}) {
+    try {
+        await fetch(`${FAISS_BASE_URL}/api/track`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                event,
+                meta: {
+                    ...meta,
+                    url: window.location.href,
+                    ua: navigator.userAgent,
+                    company: document.title.split(' ')[0]
+                }
+            })
+        });
+    } catch (e) {
+        // Silent fail
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // Lab viewer is self-contained now.
     generateLabData();
+    trackEvent('page_view');
 
     let resizeTimeout;
     window.addEventListener('resize', function() {
@@ -144,6 +166,8 @@ function generateLabData() {
                 if (!selectedId) return;
                 labCurrentSelectedId = selectedId;
 
+                trackEvent('atlas_click', { id: selectedId });
+
                 const select = document.getElementById('specSelect');
                 if (select) select.value = selectedId;
 
@@ -182,6 +206,7 @@ function populateLabDropdown(json) {
     select.onchange = function(e) {
         if (!e.target.value) return;
         labCurrentSelectedId = e.target.value;
+        trackEvent('dropdown_select', { id: labCurrentSelectedId });
         updateLabDetails(labCurrentSelectedId);
         // In lab mode, changing dropdown triggers FAISS search
         labHighlightSimilarFAISS(labCurrentSelectedId);
@@ -211,10 +236,11 @@ async function labHighlightSimilarFAISS(id) {
     if (!labAtlasData.length || !id) return;
 
     let neighborIds = null;
+    let mode = 'faiss';
 
     // 1) Try FAISS backend
     try {
-        const res = await fetch(`${FAISS_BASE_URL}/search?id=${encodeURIComponent(id)}&k=20`);
+        const res = await fetch(`${FAISS_BASE_URL}/api/search?id=${encodeURIComponent(id)}&k=20`);
         if (!res.ok) throw new Error('FAISS HTTP ' + res.status);
         const data = await res.json();
         if (data && Array.isArray(data.results) && data.results.length) {
@@ -226,6 +252,7 @@ async function labHighlightSimilarFAISS(id) {
 
     // 2) Fallback: local 3D distance if backend absent or failed
     if (!neighborIds) {
+        mode = 'local';
         const anchorIdx = labIdToIdx.get(id);
         if (anchorIdx === undefined) return;
         const anchor = labAtlasData[anchorIdx];
@@ -241,6 +268,9 @@ async function labHighlightSimilarFAISS(id) {
         arr.sort((a, b) => labDistsBuffer[a] - labDistsBuffer[b]);
         neighborIds = arr.slice(0, 20).map(i => labAtlasData[i].id);
     }
+
+    trackEvent('search_complete', { id, mode, count: neighborIds.length });
+
 
     // 3) Build highlight trace data
     const hX = [], hY = [], hZ = [], hText = [], hColor = [], hSize = [];

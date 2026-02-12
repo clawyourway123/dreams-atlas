@@ -209,15 +209,23 @@ app.add_middleware(
 
 
 # ---------------------------------------------------------------------------
-# Request Logging Middleware
+# Request Logging & Cache Headers Middleware
 # ---------------------------------------------------------------------------
 @app.middleware("http")
-async def log_requests(request: Request, call_next):
+async def process_request(request: Request, call_next):
     start = time.time()
     response = await call_next(request)
     elapsed = (time.time() - start) * 1000
-    # Log API requests (skip static assets to reduce noise)
+    
     path = request.url.path
+    
+    # Add Cache-Control for static assets
+    if any(path.endswith(ext) for ext in [".js", ".css", ".png", ".jpg", ".svg", ".woff2", ".json"]):
+        # 1 day cache for assets, 1 hour for json
+        max_age = 3600 if path.endswith(".json") else 86400
+        response.headers["Cache-Control"] = f"public, max-age={max_age}"
+    
+    # Log API requests (skip static assets to reduce noise)
     if path.startswith("/api/") or path in ("/healthz", "/search"):
         logger.info(
             f"{request.method} {path} → {response.status_code} ({elapsed:.1f}ms) "
@@ -309,6 +317,24 @@ def api_search(request: Request, id: str, k: int = 20):
 def search_legacy(request: Request, id: str, k: int = 20):
     """Legacy endpoint — same as /api/search."""
     return api_search(request=request, id=id, k=k)
+
+
+# ---------------------------------------------------------------------------
+# Analytics API
+# ---------------------------------------------------------------------------
+@app.post("/api/track")
+async def api_track(request: Request):
+    """Log an analytics event."""
+    try:
+        data = await request.json()
+        event = data.get("event", "unknown")
+        meta = data.get("meta", {})
+        client_ip = request.client.host if request.client else "unknown"
+        logger.info(f"TRACK: {event} | {json.dumps(meta)} | IP: {client_ip}")
+        return {"status": "logged"}
+    except Exception as e:
+        logger.error(f"Track error: {e}")
+        return {"status": "error"}
 
 
 # ---------------------------------------------------------------------------
