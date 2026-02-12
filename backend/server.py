@@ -306,6 +306,39 @@ async def api_track(request: Request):
     except: return {"status": "err"}
 
 # ---------------------------------------------------------------------------
+# Phase 16.5: Interoperability logic
+# ---------------------------------------------------------------------------
+@app.get("/api/eln/export")
+def eln_export(id: str, format: str = "benchling"):
+    """Export compound metadata in ELN-friendly formats."""
+    clean_id = validate_search_id(id)
+    if clean_id not in reverse_map:
+        raise HTTPException(status_code=404, detail="Compound not found")
+    
+    # Mock metadata retrieval
+    metadata = {
+        "id": clean_id,
+        "source": "DreaMS Atlas v2.5",
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "eln_target": format
+    }
+    
+    if format == "benchling":
+        return {
+            "schema": "benchling:entity:v1",
+            "entity": {
+                "name": clean_id,
+                "type": "molecule",
+                "custom_fields": {
+                    "DreaMS_ID": clean_id,
+                    "Atlas_Link": f"https://dreams-atlas.onrender.com/search?id={clean_id}"
+                }
+            }
+        }
+    
+    return metadata
+
+# ---------------------------------------------------------------------------
 # Static Files
 # ---------------------------------------------------------------------------
 @app.get("/")
