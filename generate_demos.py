@@ -9,41 +9,41 @@ template = """<!DOCTYPE html>
     <title>{company} Chemical Space Atlas (Enterprise Lab)</title>
     <script>
         // Prevent flash of wrong theme on load
-        (function() {{
+        (function() {
             var saved = localStorage.getItem('dreams-theme');
             if (!saved) saved = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
             document.documentElement.setAttribute('data-theme', saved);
-        }})();
+        })();
     </script>
     <script src="https://cdn.plot.ly/plotly-2.35.0.min.js"></script>
     <script src="https://unpkg.com/@rdkit/rdkit/dist/RDKit_minimal.js"></script>
     <link rel="stylesheet" href="atlas.css">
     <style>
-      .sidebar.collapsed {{
+      .sidebar.collapsed {
         transform: translateX(-320px);
-      }}
-      .sidebar.collapsed ~ .main-view {{
+      }
+      .sidebar.collapsed ~ .main-view {
         margin-left: 0 !important;
-      }}
-      .details-overlay {{
+      }
+      .details-overlay {
         position: fixed;
         top: 80px;
         right: 20px;
         max-width: 260px;
         z-index: 10;
-      }}
-      #sidebar-toggle.mobile-toggle {{
+      }
+      #sidebar-toggle.mobile-toggle {
         display: block !important;
-      }}
-      .btn-group {{
+      }
+      .btn-group {
         display: flex;
         gap: 8px;
         margin-top: 20px;
-      }}
-      .btn-group .btn {{
+      }
+      .btn-group .btn {
         margin-top: 0;
         flex: 1;
-      }}
+      }
     </style>
 </head>
 <body>
@@ -148,24 +148,24 @@ template = """<!DOCTYPE html>
   </div>
 </div>
 
-<script src="atlas-viewer-lab.min.js"></script>
+<script src="atlas-viewer-lab.js"></script>
 <script>
     // Theme Toggle logic for demo pages
-    (function() {{
+    (function() {
         const toggle = document.querySelector('.theme-toggle');
         const html = document.documentElement;
         
-        function setTheme(theme) {{
+        function setTheme(theme) {
             html.setAttribute('data-theme', theme);
             localStorage.setItem('dreams-theme', theme);
-        }}
+        }
 
-        toggle.addEventListener('click', () => {{
+        toggle.addEventListener('click', () => {
             const current = html.getAttribute('data-theme') || 'dark';
             const next = current === 'dark' ? 'light' : 'dark';
             setTheme(next);
-        }});
-    }})();
+        });
+    })();
 </script>
 
 </body>
@@ -188,11 +188,11 @@ companies = [
     {"name": "Henkel", "industry": "Adhesives", "count": "24,593", "file": "henkel_lab_demo.html"},
 ]
 
-v = "2.6.4"
+v = "2.6.5"
 
 for c in companies:
     content = template.replace("{company}", c["name"]).replace("{industry}", c["industry"]).replace("{spectra_count}", c["count"])
-    content = content.replace("atlas-viewer-lab.min.js", f"atlas-viewer-lab.js?v={v}")
+    content = content.replace("atlas-viewer-lab.js", f"atlas-viewer-lab.js?v={v}")
     content = content.replace("atlas.css", f"atlas.css?v={v}")
     content = content.replace("RDKit_minimal.js", "RDKit_minimal.js\" async=\"true")
     with open(f"/Users/clawdy/.openclaw/workspace/dreams-atlas/{c['file']}", "w") as f:
