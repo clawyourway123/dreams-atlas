@@ -14,7 +14,7 @@
     </script>
     <script src="https://cdn.plot.ly/plotly-2.35.0.min.js"></script>
     <script src="https://unpkg.com/@rdkit/rdkit/dist/RDKit_minimal.js" async="true"></script>
-    <link rel="stylesheet" href="atlas.css?v=2.6.2">
+    <link rel="stylesheet" href="atlas.css?v=2.6.4">
     <style>
       .sidebar.collapsed {{
         transform: translateX(-320px);
@@ -131,6 +131,12 @@
           Most similar (top 10):
           <ol id="detail-neighbors" style="margin:4px 0 0; padding-left:16px; max-height:160px; overflow-y:auto; color:var(--text-main)"></ol>
       </div>
+
+      <div id="safety-panel" class="stat-card" style="margin-top:10px; border-top: 1px solid var(--border-color);"></div>
+      <div id="hts-panel" class="stat-card" style="margin-top:10px; border-top: 1px solid var(--border-color);"></div>
+      <div id="sustainability-panel" class="stat-card" style="margin-top:10px; border-top: 1px solid var(--border-color);"></div>
+      <div id="ip-panel" class="stat-card" style="margin-top:10px; border-top: 1px solid var(--border-color);"></div>
+
       <div style="margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 12px;">
           <label style="font-size: 11px; color: var(--text-dim); display: block; margin-bottom: 5px;">R&D Annotation</label>
           <textarea id="annotationBox" style="width: 100%; background: var(--bg-body); border: 1px solid var(--border-color); color: var(--text-main); font-size: 11px; border-radius: 4px; padding: 6px; height: 40px; resize: none;" placeholder="Add team note..."></textarea>
@@ -139,7 +145,7 @@
   </div>
 </div>
 
-<script src="atlas-viewer-lab.js?v=2.6.2"></script>
+<script src="atlas-viewer-lab.js?v=2.6.4"></script>
 <script>
     // Theme Toggle logic for demo pages
     (function() {{

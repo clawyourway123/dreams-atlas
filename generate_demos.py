@@ -134,6 +134,12 @@ template = """<!DOCTYPE html>
           Most similar (top 10):
           <ol id="detail-neighbors" style="margin:4px 0 0; padding-left:16px; max-height:160px; overflow-y:auto; color:var(--text-main)"></ol>
       </div>
+
+      <div id="safety-panel" class="stat-card" style="margin-top:10px; border-top: 1px solid var(--border-color);"></div>
+      <div id="hts-panel" class="stat-card" style="margin-top:10px; border-top: 1px solid var(--border-color);"></div>
+      <div id="sustainability-panel" class="stat-card" style="margin-top:10px; border-top: 1px solid var(--border-color);"></div>
+      <div id="ip-panel" class="stat-card" style="margin-top:10px; border-top: 1px solid var(--border-color);"></div>
+
       <div style="margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 12px;">
           <label style="font-size: 11px; color: var(--text-dim); display: block; margin-bottom: 5px;">R&D Annotation</label>
           <textarea id="annotationBox" style="width: 100%; background: var(--bg-body); border: 1px solid var(--border-color); color: var(--text-main); font-size: 11px; border-radius: 4px; padding: 6px; height: 40px; resize: none;" placeholder="Add team note..."></textarea>
@@ -182,7 +188,7 @@ companies = [
     {"name": "Henkel", "industry": "Adhesives", "count": "24,593", "file": "henkel_lab_demo.html"},
 ]
 
-v = "2.6.2"
+v = "2.6.4"
 
 for c in companies:
     content = template.replace("{company}", c["name"]).replace("{industry}", c["industry"]).replace("{spectra_count}", c["count"])
