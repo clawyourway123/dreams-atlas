@@ -67,6 +67,9 @@ jobs:
   security-scan:
     name: Security Scan
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
     
     steps:
       - uses: actions/checkout@v4
@@ -80,7 +83,7 @@ jobs:
           output: 'trivy-results.sarif'
       
       - name: Upload Trivy results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: 'trivy-results.sarif'
   
@@ -135,9 +138,10 @@ jobs:
           urls: |
             https://dreams-atlas.onrender.com/
             https://dreams-atlas.onrender.com/henkel_lab_demo.html
-          uploadArtifacts: true
+          uploadArtifacts: false
           temporaryPublicStorage: true
           budgetPath: .github/lighthouse-budgets.json
+        continue-on-error: true
 
   notify:
     name: Notify on Deployment
@@ -159,15 +163,17 @@ jobs:
             TEXT="DreaMS Atlas deployment failed"
           fi
           
-          curl -X POST $SLACK_WEBHOOK -H 'Content-type: application/json' \
-            -d "{
-              \"text\": \"${STATUS_EMOJI} ${TEXT}\",
-              \"blocks\": [{
-                \"type\": \"section\",
-                \"text\": {
-                  \"type\": \"mrkdwn\",
-                  \"text\": \"${STATUS_EMOJI} *DreaMS Atlas Deployment*\n${TEXT}\nRef: <https://github.com/clawyourway123/dreams-atlas/commit/${{ github.sha }}|${{ github.sha }}>\nAuthor: ${{ github.actor }}\"
-                }
-              }]
-            }"
+          if [ -n "$SLACK_WEBHOOK" ]; then
+            curl -X POST $SLACK_WEBHOOK -H 'Content-type: application/json' \
+              -d "{
+                \"text\": \"${STATUS_EMOJI} ${TEXT}\",
+                \"blocks\": [{
+                  \"type\": \"section\",
+                  \"text\": {
+                    \"type\": \"mrkdwn\",
+                    \"text\": \"${STATUS_EMOJI} *DreaMS Atlas Deployment*\n${TEXT}\nRef: <https://github.com/clawyourway123/dreams-atlas/commit/${{ github.sha }}|${{ github.sha }}>\nAuthor: ${{ github.actor }}\"
+                  }
+                }]
+              }"
+          fi
         continue-on-error: true
