@@ -1,0 +1,23 @@
+name: Keep-alive ping
+
+on:
+  schedule:
+    # Every 10 minutes — prevents Render free tier from spinning down
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /healthz
+        env:
+          DEMO_URL: https://dreams-atlas.onrender.com
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 90 "$DEMO_URL/healthz" || true)
+          echo "HTTP status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "::warning::Dreams Atlas returned HTTP $STATUS — may be cold or down"
+            exit 1
+          fi
+          echo "Site is alive."
