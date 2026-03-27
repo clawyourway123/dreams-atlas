@@ -21,6 +21,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 
+from backend.vault_manager import VaultManager
+
 # ---------------------------------------------------------------------------
 # Logging & Event Tracking
 # ---------------------------------------------------------------------------
@@ -51,6 +53,9 @@ logger.addHandler(LogHandler())
 
 # Resolve the project root (one level up from backend/)
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+# Vault manager — per-tenant data path resolution and index caching
+vault_manager = VaultManager(PROJECT_ROOT)
 
 # ---------------------------------------------------------------------------
 # API Key Auth
@@ -254,9 +259,18 @@ def validate_search_id(raw: str) -> str:
 # ---------------------------------------------------------------------------
 # Numpy fallback for similarity search (no FAISS)
 # ---------------------------------------------------------------------------
-def numpy_search(query_vec: np.ndarray, k: int) -> tuple[np.ndarray, np.ndarray]:
-    """Brute-force L2 search using numpy — fallback when faiss is unavailable."""
-    diffs = vectors - query_vec
+def numpy_search(
+    query_vec: np.ndarray,
+    k: int,
+    vecs: np.ndarray | None = None,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Brute-force L2 search using numpy — fallback when faiss is unavailable.
+
+    *vecs* defaults to the module-level ``vectors`` when not supplied so callers
+    using the global default index require no change.
+    """
+    arr = vecs if vecs is not None else vectors
+    diffs = arr - query_vec
     dists = np.sum(diffs ** 2, axis=1)
     top_k = np.argpartition(dists, k)[:k]
     top_k_sorted = top_k[np.argsort(dists[top_k])]
@@ -455,32 +469,37 @@ def api_search(request: Request, id: str, k: int = 20, tenant_id: str = "default
     if cached:
         return {"query": clean_id, "tenant": effective_tenant, "results": cached}
 
-    query_idx = reverse_map.get(clean_id, -1)
+    # Route to tenant-specific index when vault files exist; otherwise use the
+    # module-level defaults (preserves single-tenant / dev behaviour unchanged).
+    if effective_tenant != "default" and vault_manager.has_vault(effective_tenant):
+        t_data = vault_manager.get_tenant_data(effective_tenant)
+        t_vectors = t_data["vectors"]
+        t_id_map = t_data["id_map"]
+        t_reverse_map = t_data["reverse_map"]
+        t_index = t_data["index"]
+    else:
+        t_vectors = vectors
+        t_id_map = id_map
+        t_reverse_map = reverse_map
+        t_index = index
+
+    query_idx = t_reverse_map.get(clean_id, -1)
     if query_idx == -1:
         raise HTTPException(status_code=404)
-    if vectors is None:
+    if t_vectors is None:
         raise HTTPException(status_code=503)
 
-    query_vec = vectors[query_idx].reshape(1, -1)
-    if index:
-        D, indices = index.search(query_vec, k)
+    query_vec = t_vectors[query_idx].reshape(1, -1)
+    if t_index:
+        D, indices = t_index.search(query_vec, k)
     else:
-        D, indices = numpy_search(query_vec, k)
+        D, indices = numpy_search(query_vec, k, vecs=t_vectors)
 
     results = []
     for rank, idx in enumerate(indices[0]):
         dist = float(D[0][rank])
-        results.append({"id": id_map.get(int(idx)),
+        results.append({"id": t_id_map.get(int(idx)),
                        "score": round(1.0/(1.0+dist), 6), "rank": rank})
-
-    # Mock tenant-specific filtering (simulated)
-    if effective_tenant != "default":
-        # Role-Based Access Control (RBAC) Logic
-        # Admin can see everything, Viewer only sees even IDs
-        user_role = request.headers.get("X-User-Role", "viewer")
-        if user_role == "viewer":
-            results = [r for r in results if hash(f"{effective_tenant}{r['id']}") % 2 == 0]
-        logger.info(f"RBAC: Filtered results for role {user_role} (Tenant: {effective_tenant})")
 
     search_cache.put(cache_key, results)
     return {"query": clean_id, "tenant": effective_tenant, "results": results}
