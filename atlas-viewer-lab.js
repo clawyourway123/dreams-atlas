@@ -27,6 +27,7 @@ let labCurrentSelectedId = null;
 let lastSearchResults = [];
 let compareMode = false;
 let comparisonAnchor = null;
+var _lastCameraEye = { x: 1.4, y: 1.4, z: 1.4 };
 
 // Loading phase management
 const LOADING_PHASES = [
@@ -106,42 +107,41 @@ function animateCounter(el, target, duration) {
     requestAnimationFrame(tick);
 }
 
-// Camera zoom to clicked point
+// Camera zoom to clicked point — returns Promise that resolves when animation completes
 function zoomToPoint(x, y, z) {
-    var currentCamera = null;
-    var plotEl = document.getElementById('scatter3d');
-    if (plotEl && plotEl.layout && plotEl.layout.scene) {
-        currentCamera = plotEl.layout.scene.camera || {};
-    }
-    var startEye = (currentCamera && currentCamera.eye) || { x: 1.4, y: 1.4, z: 1.4 };
-    // Target: closer to the point but offset
-    var dist = 0.6;
-    var dx = x, dy = y, dz = z;
-    var len = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1;
-    var targetEye = {
-        x: x + (dx / len) * dist,
-        y: y + (dy / len) * dist,
-        z: z + (dz / len) * dist
-    };
-
-    var duration = 600;
-    var startTime = performance.now();
-
-    function lerp(a, b, t) { return a + (b - a) * t; }
-    function easeInOut(t) { return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; }
-
-    function step(now) {
-        var t = Math.min((now - startTime) / duration, 1);
-        var e = easeInOut(t);
-        var eye = {
-            x: lerp(startEye.x, targetEye.x, e),
-            y: lerp(startEye.y, targetEye.y, e),
-            z: lerp(startEye.z, targetEye.z, e)
+    return new Promise(function(resolve) {
+        var startEye = { x: _lastCameraEye.x, y: _lastCameraEye.y, z: _lastCameraEye.z };
+        // Target: closer to the point but offset
+        var dist = 0.6;
+        var dx = x, dy = y, dz = z;
+        var len = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1;
+        var targetEye = {
+            x: x + (dx / len) * dist,
+            y: y + (dy / len) * dist,
+            z: z + (dz / len) * dist
         };
-        Plotly.relayout('scatter3d', { 'scene.camera.eye': eye });
-        if (t < 1) requestAnimationFrame(step);
-    }
-    requestAnimationFrame(step);
+
+        var duration = 600;
+        var startTime = performance.now();
+
+        function lerp(a, b, t) { return a + (b - a) * t; }
+        function easeInOut(t) { return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; }
+
+        function step(now) {
+            var t = Math.min((now - startTime) / duration, 1);
+            var e = easeInOut(t);
+            var eye = {
+                x: lerp(startEye.x, targetEye.x, e),
+                y: lerp(startEye.y, targetEye.y, e),
+                z: lerp(startEye.z, targetEye.z, e)
+            };
+            _lastCameraEye = eye;
+            Plotly.relayout('scatter3d', { 'scene.camera.eye': eye });
+            if (t < 1) requestAnimationFrame(step);
+            else resolve();
+        }
+        requestAnimationFrame(step);
+    });
 }
 
 async function trackEvent(event, meta = {}) {
@@ -218,7 +218,15 @@ async function generateLabData() {
         hideLoadingOverlay();
         setTimeout(() => Plotly.Plots.resize('scatter3d'), 100);
 
-        document.getElementById('scatter3d').on('plotly_click', (data) => {
+        // Track user-initiated camera changes to keep _lastCameraEye current
+        document.getElementById('scatter3d').on('plotly_relayout', (eventData) => {
+            if (eventData && eventData['scene.camera.eye']) {
+                const eye = eventData['scene.camera.eye'];
+                _lastCameraEye = { x: eye.x, y: eye.y, z: eye.z };
+            }
+        });
+
+        document.getElementById('scatter3d').on('plotly_click', async (data) => {
             if (!data || !data.points || !data.points.length) return;
             const pt = data.points[0];
             const selectedId = (pt.curveNumber === 0 && ids[pt.pointNumber]) ? ids[pt.pointNumber] : pt.text;
@@ -227,14 +235,7 @@ async function generateLabData() {
             labCurrentSelectedId = selectedId;
             trackEvent('atlas_click', { id: selectedId });
 
-            // Camera zoom to clicked point
-            const idx = labIdToIdx.get(selectedId);
-            if (idx !== undefined) {
-                const d = labAtlasData[idx];
-                zoomToPoint(d.x, d.y, d.z);
-            }
-
-            // Show details panel with slide-in
+            // Show details panel with slide-in (CSS-only, no Plotly conflict)
             const panel = document.getElementById('details-panel');
             if (panel) { panel.style.display = 'block'; panel.classList.add('visible'); }
 
@@ -242,6 +243,13 @@ async function generateLabData() {
             if (select) select.value = selectedId;
 
             updateLabDetails(selectedId);
+
+            // Camera zoom to clicked point — await before highlighting to avoid Plotly race
+            const idx = labIdToIdx.get(selectedId);
+            if (idx !== undefined) {
+                const d = labAtlasData[idx];
+                await zoomToPoint(d.x, d.y, d.z);
+            }
 
             if (compareMode && comparisonAnchor && selectedId !== comparisonAnchor.id) {
                 runComparison(selectedId);
