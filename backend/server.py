@@ -86,6 +86,10 @@ id_map: dict[int, str] = {}
 reverse_map: dict[str, int] = {}
 faiss_available = False
 
+# Cluster analysis — populated once at startup in load_data()
+cluster_assignments: np.ndarray | None = None  # shape (n,), dtype int
+cluster_stats: dict[int, dict] = {}  # cluster_id -> stats dict
+
 try:
     import faiss
     faiss_available = True
@@ -151,6 +155,74 @@ rate_limiter = RateLimiter(max_requests=60, window_seconds=60)
 
 
 # ---------------------------------------------------------------------------
+# Cluster statistics (computed once at startup, no extra dependencies)
+# ---------------------------------------------------------------------------
+
+def _build_cluster_stats(
+    vecs: np.ndarray,
+    assignments: np.ndarray,
+    local_id_map: dict,
+) -> dict:
+    """Compute per-cluster statistics from embedding vectors.
+
+    Returns a dict keyed by cluster_id containing pre-computed stats so
+    the API endpoints can serve responses in O(1) without holding the GIL.
+    """
+    norms = np.linalg.norm(vecs, axis=1, keepdims=True)
+    norms = np.where(norms == 0, 1.0, norms)
+    unit_vecs = (vecs / norms).astype("float32")
+
+    cluster_ids = sorted(set(int(c) for c in assignments))
+
+    # Pass 1 — centroids and centroid density
+    centroids: dict[int, np.ndarray] = {}
+    densities: dict[int, float] = {}
+    for cid in cluster_ids:
+        members = unit_vecs[assignments == cid]
+        raw = members.mean(axis=0)
+        raw_norm = float(np.linalg.norm(raw))
+        densities[cid] = round(min(raw_norm, 1.0), 4)
+        centroids[cid] = raw / raw_norm if raw_norm > 0 else raw
+
+    # Pass 2 — per-member similarity stats and representative IDs
+    stats: dict[int, dict] = {}
+    for cid in cluster_ids:
+        mask = assignments == cid
+        member_indices = np.where(mask)[0]
+        members = unit_vecs[mask]
+        sims = (members @ centroids[cid]).astype("float64")
+
+        top_k = min(3, len(member_indices))
+        top_local = np.argsort(-sims)[:top_k]
+        top_ids = [local_id_map[int(member_indices[i])] for i in top_local]
+
+        stats[cid] = {
+            "size": int(mask.sum()),
+            "centroid_density": densities[cid],
+            "intra_cluster_similarity_mean": round(float(sims.mean()), 4),
+            "intra_cluster_similarity_p10": round(float(np.percentile(sims, 10)), 4),
+            "top_representative_ids": top_ids,
+            "_centroid": centroids[cid],
+        }
+
+    # Pass 3 — nearest cluster (centroid-to-centroid L2)
+    if len(cluster_ids) > 1:
+        centroid_matrix = np.stack([centroids[cid] for cid in cluster_ids])
+        for i, cid in enumerate(cluster_ids):
+            dists = np.linalg.norm(centroid_matrix - centroids[cid], axis=1)
+            dists[i] = np.inf
+            nearest_idx = int(np.argmin(dists))
+            stats[cid]["nearest_cluster"] = cluster_ids[nearest_idx]
+            stats[cid]["nearest_cluster_distance"] = round(float(dists[nearest_idx]), 4)
+    else:
+        cid = cluster_ids[0]
+        stats[cid]["nearest_cluster"] = cid
+        stats[cid]["nearest_cluster_distance"] = 0.0
+
+    return stats
+
+
+# ---------------------------------------------------------------------------
 # Roadmap stub helper
 # ---------------------------------------------------------------------------
 def _coming_soon(feature: str) -> dict:
@@ -195,7 +267,7 @@ def numpy_search(query_vec: np.ndarray, k: int) -> tuple[np.ndarray, np.ndarray]
 # Data Loading
 # ---------------------------------------------------------------------------
 def load_data(retries=3):
-    global index, vectors
+    global index, vectors, cluster_assignments, cluster_stats
 
     for attempt in range(retries):
         logger.info(f"Loading data (attempt {attempt + 1}/{retries})...")
@@ -206,15 +278,16 @@ def load_data(retries=3):
             id_map.clear()
             reverse_map.clear()
 
+            atlas_json = None
             n_items = 1000
             if atlas_path.exists():
                 with open(atlas_path, "r") as f:
                     atlas_json = json.load(f)
-                    for i, item in enumerate(atlas_json):
-                        str_id = item.get("id", f"ID_{i}")
-                        id_map[i] = str_id
-                        reverse_map[str_id] = i
-                    n_items = len(atlas_json)
+                for i, item in enumerate(atlas_json):
+                    str_id = item.get("id", f"ID_{i}")
+                    id_map[i] = str_id
+                    reverse_map[str_id] = i
+                n_items = len(atlas_json)
                 logger.info(f"Loaded {len(id_map)} ID mappings")
 
             if embeddings_path.exists():
@@ -241,6 +314,18 @@ def load_data(retries=3):
                     logger.warning(f"FAISS index build failed ({faiss_err}) — using numpy fallback")
             if index is None:
                 logger.info("Using numpy search")
+
+            # Build cluster stats if atlas_data provided cluster labels
+            if atlas_json is not None:
+                raw_assigns = [item.get("cluster", 0) for item in atlas_json]
+                if len(raw_assigns) == vectors.shape[0]:
+                    cluster_assignments = np.array(raw_assigns, dtype=np.int32)
+                    cluster_stats = _build_cluster_stats(
+                        vectors, cluster_assignments, dict(id_map)
+                    )
+                    logger.info(
+                        f"Cluster stats built: {len(cluster_stats)} clusters"
+                    )
 
             return
 
@@ -586,6 +671,44 @@ def validation_similarity(id_a: str, id_b: str):
     validate_search_id(id_a)
     validate_search_id(id_b)
     return _coming_soon("DreaMS vs. Experimental Similarity Validation")
+
+# ---------------------------------------------------------------------------
+# Cluster Analysis (real, computed at startup from existing embeddings)
+# ---------------------------------------------------------------------------
+
+
+@app.get("/api/cluster/list")
+def cluster_list():
+    """Return all clusters with their sizes."""
+    if not cluster_stats:
+        raise HTTPException(status_code=503, detail="Cluster data not available")
+    return {
+        "clusters": [
+            {"cluster_id": cid, "size": stats["size"]}
+            for cid, stats in sorted(cluster_stats.items())
+        ]
+    }
+
+
+@app.get("/api/cluster/insights")
+def cluster_insights(cluster_id: int):
+    """Return detailed analysis for a single cluster."""
+    if not cluster_stats:
+        raise HTTPException(status_code=503, detail="Cluster data not available")
+    stats = cluster_stats.get(cluster_id)
+    if stats is None:
+        raise HTTPException(status_code=404, detail=f"Cluster {cluster_id} not found")
+    return {
+        "cluster_id": cluster_id,
+        "size": stats["size"],
+        "centroid_density": stats["centroid_density"],
+        "intra_cluster_similarity_mean": stats["intra_cluster_similarity_mean"],
+        "intra_cluster_similarity_p10": stats["intra_cluster_similarity_p10"],
+        "nearest_cluster": stats["nearest_cluster"],
+        "nearest_cluster_distance": stats["nearest_cluster_distance"],
+        "top_representative_ids": stats["top_representative_ids"],
+    }
+
 
 # ---------------------------------------------------------------------------
 # Static Files

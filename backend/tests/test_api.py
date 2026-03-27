@@ -46,10 +46,18 @@ def inject_test_data(monkeypatch):
     test_id_map = {i: f"ID_{i:04d}" for i in range(NUM_VECTORS)}
     test_reverse_map = {v: k for k, v in test_id_map.items()}
 
+    # Two equal-sized clusters: first half → 0, second half → 1
+    assigns = np.zeros(NUM_VECTORS, dtype=np.int32)
+    assigns[NUM_VECTORS // 2 :] = 1
+
     def fake_load_data(retries=3):
         server_module.vectors = vecs
         server_module.id_map = test_id_map
         server_module.reverse_map = test_reverse_map
+        server_module.cluster_assignments = assigns
+        server_module.cluster_stats = server_module._build_cluster_stats(
+            vecs, assigns, dict(test_id_map)
+        )
         if server_module.faiss_available and server_module.faiss is not None:
             d = vecs.shape[1]
             idx = server_module.faiss.IndexFlatL2(d)
@@ -291,6 +299,48 @@ def test_key_tenant_overrides_query_param(client):
     assert response.status_code == 200
     # The response tenant must reflect the key's tenant, not the query param.
     assert response.json()["tenant"] == "default"
+
+
+# ---------------------------------------------------------------------------
+# 10. Cluster endpoints return real computed values
+# ---------------------------------------------------------------------------
+
+
+def test_cluster_list_returns_all_clusters(client):
+    """/api/cluster/list must return one entry per cluster with correct sizes."""
+    response = client.get("/api/cluster/list", headers=AUTH_HEADER)
+    assert response.status_code == 200
+    body = response.json()
+    assert "clusters" in body
+    clusters = body["clusters"]
+    assert len(clusters) == 2, "Expected 2 test clusters"
+    sizes = {c["cluster_id"]: c["size"] for c in clusters}
+    assert sizes[0] == NUM_VECTORS // 2
+    assert sizes[1] == NUM_VECTORS // 2
+
+
+def test_cluster_insights_returns_real_values(client):
+    """/api/cluster/insights must return numeric analysis, not a stub."""
+    response = client.get("/api/cluster/insights?cluster_id=0", headers=AUTH_HEADER)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["cluster_id"] == 0
+    assert body["size"] == NUM_VECTORS // 2
+    assert 0.0 <= body["centroid_density"] <= 1.0
+    assert 0.0 <= body["intra_cluster_similarity_mean"] <= 1.0
+    assert 0.0 <= body["intra_cluster_similarity_p10"] <= 1.0
+    assert body["intra_cluster_similarity_p10"] <= body["intra_cluster_similarity_mean"]
+    assert body["nearest_cluster"] == 1
+    assert body["nearest_cluster_distance"] > 0
+    assert isinstance(body["top_representative_ids"], list)
+    assert len(body["top_representative_ids"]) > 0
+    # Confirm it is NOT returning a stub
+    assert "status" not in body or body.get("status") != "coming_soon"
+
+
+def test_cluster_insights_404_for_unknown_cluster(client):
+    response = client.get("/api/cluster/insights?cluster_id=999", headers=AUTH_HEADER)
+    assert response.status_code == 404
 
 
 def test_alpha_key_sets_correct_tenant(client):
