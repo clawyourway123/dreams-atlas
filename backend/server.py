@@ -151,6 +151,18 @@ rate_limiter = RateLimiter(max_requests=60, window_seconds=60)
 
 
 # ---------------------------------------------------------------------------
+# Roadmap stub helper
+# ---------------------------------------------------------------------------
+def _coming_soon(feature: str) -> dict:
+    return {
+        "status": "coming_soon",
+        "feature": feature,
+        "eta": "Q3 2026",
+        "contact": "hello@gstack.ai",
+    }
+
+
+# ---------------------------------------------------------------------------
 # Input Validation
 # ---------------------------------------------------------------------------
 _SAFE_ID_RE = re.compile(r"^[A-Za-z0-9_\-.:, +()'\[\]]{1,256}$")
@@ -445,55 +457,16 @@ async def api_track(request: Request):
 
 @app.get("/api/eln/context")
 def eln_context(id: str, experiment_type: str = "similarity_review"):
-    """Generate 'Chemical Context' injection for automated experiment log metadata."""
-    clean_id = validate_search_id(id)
-    if clean_id not in reverse_map:
-        raise HTTPException(status_code=404, detail="Compound not found")
-
-    # In a real app, we'd fetch actual metadata and neighborhood stats
-    context = {
-        "molecule_id": clean_id,
-        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
-        "experiment": experiment_type,
-        "atlas_neighborhood": "Cluster_0",  # Mock
-        "recommended_action": "Verify spectrum similarity with Scytonemin reference.",
-        "log_entry": (
-            f"DREAM-CONTEXT: [{clean_id}] Analysis in DreaMS Atlas. "
-            "Part of neighborhood Cluster_0. Recommended for further spectral deconvolution."
-        )
-    }
-    return context
+    """ELN context injection — roadmap feature."""
+    validate_search_id(id)
+    return _coming_soon("ELN Context Injection")
 
 
 @app.get("/api/eln/export")
 def eln_export(id: str, format: str = "benchling"):
-    """Export compound metadata in ELN-friendly formats."""
-    clean_id = validate_search_id(id)
-    if clean_id not in reverse_map:
-        raise HTTPException(status_code=404, detail="Compound not found")
-
-    # Mock metadata retrieval
-    metadata = {
-        "id": clean_id,
-        "source": "DreaMS Atlas v2.5",
-        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        "eln_target": format
-    }
-
-    if format == "benchling":
-        return {
-            "schema": "benchling:entity:v1",
-            "entity": {
-                "name": clean_id,
-                "type": "molecule",
-                "custom_fields": {
-                    "DreaMS_ID": clean_id,
-                    "Atlas_Link": f"https://dreams-atlas.onrender.com/search?id={clean_id}"
-                }
-            }
-        }
-
-    return metadata
+    """ELN export — roadmap feature."""
+    validate_search_id(id)
+    return _coming_soon("ELN Export (Benchling, etc.)")
 
 # ---------------------------------------------------------------------------
 # Phase 16.5: LIMS Ingestion
@@ -502,46 +475,22 @@ def eln_export(id: str, format: str = "benchling"):
 
 @app.get("/api/lims/ingest")
 def lims_ingest(smiles: str):
-    """SMILES-to-Spectrum mapping for LIMS ingestion (Mock)."""
-    # Simple hash-based mapping for demo
-    mock_id = f"MOL_{abs(hash(smiles)) % 5000}"
-    query_idx = reverse_map.get(mock_id, 0)
-    str_id = id_map.get(query_idx, "Unknown")
-
-    return {
-        "smiles": smiles,
-        "matched_spectrum_id": str_id,
-        "confidence": 0.89,
-        "status": "LIMS_READY"
-    }
+    """LIMS ingestion — roadmap feature."""
+    return _coming_soon("LIMS SMILES-to-Spectrum Ingestion")
 
 
 @app.post("/api/dotmatics/sync")
 def dotmatics_sync(id: str, payload: dict = None):
-    """Mock Dotmatics integration hook."""
-    clean_id = validate_search_id(id)
-    # Simulate pushing data to Dotmatics
-    logger.info(f"DOTMATICS SYNC: Pushing {clean_id} to Dotmatics gateway.")
-    return {
-        "status": "success",
-        "molecule_id": clean_id,
-        "dotmatics_record_id": f"DX-{int(time.time())}",
-        "synced_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-    }
+    """Dotmatics integration — roadmap feature."""
+    validate_search_id(id)
+    return _coming_soon("Dotmatics Sync Integration")
 
 
 @app.get("/api/molecule/smiles")
 def get_smiles(id: str):
-    """Return mock SMILES for a given compound ID."""
-    clean_id = validate_search_id(id)
-    # Mock SMILES mapping
-    mock_smiles = {
-        "Scytonemin M+H": "C1=CC=C2C(=C1)C3=C(N2)C(=O)C(=C3)C4=CC5=C(C=C4)NC6=CC=CC=C56",
-        "Salinisporamide A M+H": "CC1C(C(=O)N1C(CC2=CC=CC=C2)C(=O)O)C(C)O",
-        "Hectochlorin M+H": "CCCCCCCCCCC(C(CC(=O)NC(C(C)OC(=O)C)C(=O)O)O)Cl"
-    }
-    # Caffeine fallback
-    return {"id": clean_id, "smiles": mock_smiles.get(clean_id, "CN1C=NC2=C1C(=O)N(C(=O)N2C)C")}
+    """SMILES lookup — roadmap feature."""
+    validate_search_id(id)
+    return _coming_soon("Molecule SMILES Lookup")
 
 # ---------------------------------------------------------------------------
 # Phase 20: Predictive ADMET & Safety Intelligence
@@ -552,14 +501,14 @@ def get_smiles(id: str):
 def safety_score(id: str):
     """ADMET and safety scoring — roadmap feature."""
     validate_search_id(id)
-    return {"status": "coming_soon", "feature": "Predictive ADMET & Safety Scoring", "eta": "Q3 2026", "contact": "hello@gstack.ai"}
+    return _coming_soon("Predictive ADMET & Safety Scoring")
 
 
 @app.get("/api/safety/sds")
 def safety_sds(id: str):
     """Safety Data Sheet generation — roadmap feature."""
     validate_search_id(id)
-    return {"status": "coming_soon", "feature": "Safety Data Sheet Generation", "eta": "Q3 2026", "contact": "hello@gstack.ai"}
+    return _coming_soon("Safety Data Sheet Generation")
 
 # ---------------------------------------------------------------------------
 # Phase 21: High-Throughput Screening (HTS) & Assay Data Fusion
@@ -570,22 +519,13 @@ def safety_sds(id: str):
 def hts_assay(id: str):
     """HTS assay data fusion — roadmap feature."""
     validate_search_id(id)
-    return {"status": "coming_soon", "feature": "High-Throughput Screening Assay Data", "eta": "Q3 2026", "contact": "hello@gstack.ai"}
+    return _coming_soon("High-Throughput Screening Assay Data")
 
 
 @app.get("/api/hts/sar")
 def hts_sar_map(cluster_id: int = 0):
-    """Mock SAR heatmap data for a chemical cluster."""
-    # Return mock IDs and their assay activities
-    results = []
-    for i in range(10):
-        mock_id = f"MOL_{cluster_id}_{i}"
-        results.append({
-            "id": mock_id,
-            "activity": round(10 + (hash(mock_id) % 90), 2),
-            "status": "active" if (hash(mock_id) % 100) > 70 else "inactive"
-        })
-    return {"cluster": cluster_id, "data": results}
+    """SAR heatmap — roadmap feature."""
+    return _coming_soon("Structure-Activity Relationship Map")
 
 # ---------------------------------------------------------------------------
 # Phase 22: Sustainable Chemistry & Green Synthesis Score
@@ -594,28 +534,9 @@ def hts_sar_map(cluster_id: int = 0):
 
 @app.get("/api/sustainability/score")
 def sustainability_score(id: str):
-    """Sustainability and Green Chemistry scoring (Mock)."""
-    clean_id = validate_search_id(id)
-    h = hash(clean_id)
-
-    atom_economy = round(70 + (h % 30), 2)
-    e_factor = round(5 + (h % 95), 1)
-
-    # Inventory check
-    inventory = ["Acetone", "Ethanol"] if (h % 2) == 0 else ["DCM", "THF", "Toluene"]
-
-    return {
-        "id": clean_id,
-        "green_score": round((atom_economy / 100.0) * (1.0 - (e_factor / 200.0)) * 100, 1),
-        "metrics": {
-            "atom_economy": f"{atom_economy}%",
-            "e_factor": e_factor,
-            "solvent_safety": "High" if e_factor < 20 else "Moderate",
-            "carbon_footprint": f"{round(e_factor * 0.5, 2)} kg CO2/kg"
-        },
-        "inventory_reagents": inventory,
-        "status": "GREEN" if atom_economy > 85 and e_factor < 15 else "STANDARD"
-    }
+    """Green chemistry scoring — roadmap feature."""
+    validate_search_id(id)
+    return _coming_soon("Sustainable Chemistry & Green Synthesis Score")
 
 # ---------------------------------------------------------------------------
 # Phase 23: Global R&D Collaboration & IP Management
@@ -624,38 +545,15 @@ def sustainability_score(id: str):
 
 @app.get("/api/ip/check")
 def ip_check(id: str):
-    """Mock IP/Patent check and Freedom to Operate (FTO)."""
-    clean_id = validate_search_id(id)
-    h = hash(clean_id)
-
-    # Simulate patent matches
-    patents = []
-    if h % 5 == 0:
-        patents.append({"id": f"US-{h % 10000000}-B2",
-                       "assignee": "Competitor Pharma", "status": "Active"})
-
-    return {
-        "id": clean_id,
-        "fto_status": "CLEAR" if not patents else "POTENTIAL_CONFLICT",
-        "matches": patents,
-        "novelty_score": round(0.7 + (h % 30) / 100.0, 2),
-        "ip_protection_recommendation": "File Provisional" if not patents else "Redesign Scaffold"
-    }
+    """IP/Patent FTO check — roadmap feature."""
+    validate_search_id(id)
+    return _coming_soon("IP & Freedom-to-Operate Check")
 
 
 @app.post("/api/collaboration/sign")
 async def collaboration_sign(request: Request):
-    """Mock E-signature for experimental sign-off."""
-    try:
-        data = await request.json()
-        logger.info(f"COLLAB SIGN: {data.get('user')} signed off on {data.get('id')}")
-        return {
-            "status": "success",
-            "signature_id": f"SIG-{int(time.time())}",
-            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-        }
-    except Exception:
-        return {"status": "error"}
+    """E-signature for experimental sign-off — roadmap feature."""
+    return _coming_soon("Collaborative E-Signature")
 
 # ---------------------------------------------------------------------------
 # Phase 25: Real-World Data Integration & Property Mapping
@@ -664,22 +562,9 @@ async def collaboration_sign(request: Request):
 
 @app.get("/api/molecule/properties")
 def get_molecule_properties(id: str):
-    """Return high-fidelity adhesive property overlays (Tack, Shear, Viscosity)."""
-    clean_id = validate_search_id(id)
-    h = hash(clean_id)
-
-    # Deterministic mock property mapping
-    return {
-        "id": clean_id,
-        "properties": {
-            "tack": round(2.0 + (h % 80) / 10.0, 2),        # N/25mm
-            "shear": round(100 + (h % 900), 0),           # minutes
-            "viscosity": round(500 + (h % 4500), 0),      # mPa·s
-            "glass_transition_temp": round(-60 + (h % 40), 1),  # °C
-            "solids_content": round(30 + (h % 40), 1)      # %
-        },
-        "confidence_score": round(0.85 + (h % 15) / 100.0, 2)
-    }
+    """Molecule property overlays — roadmap feature."""
+    validate_search_id(id)
+    return _coming_soon("Real-World Molecule Property Mapping")
 
 
 @app.post("/api/onboard/upload")
@@ -697,21 +582,10 @@ async def onboard_upload(request: Request):
 
 @app.get("/api/validation/similarity")
 def validation_similarity(id_a: str, id_b: str):
-    """Compare DreaMS similarity vs. experimental chemical relatedness."""
-    clean_a = validate_search_id(id_a)
-    clean_b = validate_search_id(id_b)
-
-    # Mock validation score
-    dreams_score = round(0.4 + (hash(clean_a + clean_b) % 60) / 100.0, 2)
-    experimental_score = round(dreams_score + (hash(clean_a) % 10 - 5) / 100.0, 2)
-
-    return {
-        "comparison": [clean_a, clean_b],
-        "dreams_similarity": dreams_score,
-        "experimental_relatedness": experimental_score,
-        "delta": round(abs(dreams_score - experimental_score), 3),
-        "status": "VALIDATED" if abs(dreams_score - experimental_score) < 0.1 else "OUTLIER"
-    }
+    """Cross-validation against experimental data — roadmap feature."""
+    validate_search_id(id_a)
+    validate_search_id(id_b)
+    return _coming_soon("DreaMS vs. Experimental Similarity Validation")
 
 # ---------------------------------------------------------------------------
 # Static Files
