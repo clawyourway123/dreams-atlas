@@ -226,7 +226,7 @@ async function generateLabData() {
             }
         });
 
-        document.getElementById('scatter3d').on('plotly_click', async (data) => {
+        document.getElementById('scatter3d').on('plotly_click', (data) => {
             if (!data || !data.points || !data.points.length) return;
             const pt = data.points[0];
             const selectedId = (pt.curveNumber === 0 && ids[pt.pointNumber]) ? ids[pt.pointNumber] : pt.text;
@@ -235,21 +235,10 @@ async function generateLabData() {
             labCurrentSelectedId = selectedId;
             trackEvent('atlas_click', { id: selectedId });
 
-            // Show details panel with slide-in (CSS-only, no Plotly conflict)
-            const panel = document.getElementById('details-panel');
-            if (panel) { panel.style.display = 'block'; panel.classList.add('visible'); }
-
             const select = document.getElementById('specSelect');
             if (select) select.value = selectedId;
 
             updateLabDetails(selectedId);
-
-            // Camera zoom to clicked point — await before highlighting to avoid Plotly race
-            const idx = labIdToIdx.get(selectedId);
-            if (idx !== undefined) {
-                const d = labAtlasData[idx];
-                await zoomToPoint(d.x, d.y, d.z);
-            }
 
             if (compareMode && comparisonAnchor && selectedId !== comparisonAnchor.id) {
                 runComparison(selectedId);
@@ -436,14 +425,7 @@ async function labHighlightSimilarFAISS(id) {
         });
     }
 
-    // Dim base trace to make highlights pop, then restore
-    Plotly.restyle('scatter3d', { 'marker.opacity': 0.25 }, [0]);
     Plotly.restyle('scatter3d', { x: [hX], y: [hY], z: [hZ], text: [hText], 'marker.color': [hColor], 'marker.size': [hSize] }, [1]);
-
-    // Fade base trace back after a moment
-    setTimeout(() => {
-        Plotly.restyle('scatter3d', { 'marker.opacity': 0.65 }, [0]);
-    }, 1200);
 }
 
 function exportResultsAsCSV() {
