@@ -1,0 +1,117 @@
+/* Brand Theme System — DreaMS Atlas Enterprise */
+/* Each [data-brand] overrides --accent and --accent-glow */
+
+:root {
+    --brand-accent: #e1000f;
+    --brand-accent-glow: rgba(225, 0, 15, 0.4);
+    --brand-accent-hover: #ff1a2b;
+}
+
+[data-brand="henkel"] {
+    --brand-accent: #e1000f;
+    --brand-accent-glow: rgba(225, 0, 15, 0.4);
+    --brand-accent-hover: #ff2a3b;
+}
+
+[data-brand="basf"] {
+    --brand-accent: #004A96;
+    --brand-accent-glow: rgba(0, 74, 150, 0.4);
+    --brand-accent-hover: #0060c0;
+}
+
+[data-brand="3m"] {
+    --brand-accent: #FF0000;
+    --brand-accent-glow: rgba(255, 0, 0, 0.4);
+    --brand-accent-hover: #ff2a2a;
+}
+
+[data-brand="dow"] {
+    --brand-accent: #E40046;
+    --brand-accent-glow: rgba(228, 0, 70, 0.4);
+    --brand-accent-hover: #ff1a60;
+}
+
+[data-brand="arkema"] {
+    --brand-accent: #0072CE;
+    --brand-accent-glow: rgba(0, 114, 206, 0.4);
+    --brand-accent-hover: #1a8aee;
+}
+
+[data-brand="avery-dennison"] {
+    --brand-accent: #CF202F;
+    --brand-accent-glow: rgba(207, 32, 47, 0.4);
+    --brand-accent-hover: #e93a49;
+}
+
+[data-brand="syensqo"] {
+    --brand-accent: #6B2D8B;
+    --brand-accent-glow: rgba(107, 45, 139, 0.4);
+    --brand-accent-hover: #8545a8;
+}
+
+[data-brand="akzonobel"] {
+    --brand-accent: #004B87;
+    --brand-accent-glow: rgba(0, 75, 135, 0.4);
+    --brand-accent-hover: #0065b0;
+}
+
+[data-brand="clariant"] {
+    --brand-accent: #D7001E;
+    --brand-accent-glow: rgba(215, 0, 30, 0.4);
+    --brand-accent-hover: #f01a38;
+}
+
+[data-brand="covestro"] {
+    --brand-accent: #00965E;
+    --brand-accent-glow: rgba(0, 150, 94, 0.4);
+    --brand-accent-hover: #00b878;
+}
+
+[data-brand="dupont"] {
+    --brand-accent: #ED1C24;
+    --brand-accent-glow: rgba(237, 28, 36, 0.4);
+    --brand-accent-hover: #ff363e;
+}
+
+[data-brand="evonik"] {
+    --brand-accent: #4A008E;
+    --brand-accent-glow: rgba(74, 0, 142, 0.4);
+    --brand-accent-hover: #6200b8;
+}
+
+[data-brand="ppg"] {
+    --brand-accent: #003DA5;
+    --brand-accent-glow: rgba(0, 61, 165, 0.4);
+    --brand-accent-hover: #0055d0;
+}
+
+/* Apply brand vars to existing accent references */
+[data-brand] {
+    --accent: var(--brand-accent);
+    --accent-glow: var(--brand-accent-glow);
+}
+
+[data-brand] .btn:hover {
+    background: var(--brand-accent-hover);
+}
+
+[data-brand] .cta {
+    background: var(--brand-accent);
+    box-shadow: 0 0 20px var(--brand-accent-glow);
+}
+
+[data-brand] .cta:hover {
+    background: var(--brand-accent-hover);
+}
+
+[data-brand] .badge {
+    background: var(--brand-accent);
+}
+
+[data-brand] .section-label {
+    color: var(--brand-accent);
+}
+
+[data-brand] .pilot-icon {
+    color: var(--brand-accent);
+}

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-brand="basf">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,6 +15,7 @@
     <script src="https://cdn.plot.ly/plotly-2.35.0.min.js"></script>
     <script src="https://unpkg.com/@rdkit/rdkit/dist/RDKit_minimal.js" async="true"></script>
     <link rel="stylesheet" href="atlas.css?v=2.6.5">
+    <link rel="stylesheet" href="brand-themes.css?v=1.0">
     <style>
       .sidebar.collapsed {
         transform: translateX(-320px);
@@ -45,8 +46,11 @@
 </head>
 <body>
 <div id="loading-overlay">
-    <div class="loader" style="display:block"></div>
-    <div style="margin-top:10px;color:var(--text-dim);font-size:12px;font-family:'Inter',sans-serif">Loading BASF Atlas (Lab / FAISS)...</div>
+    <div class="loading-ring" style="width:48px;height:48px;border:2px solid var(--border-color);border-top:2px solid var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;box-shadow:0 0 20px var(--accent-glow);"></div>
+    <div class="loading-shimmer" style="margin-top:16px;font-size:12px;font-family:Inter,sans-serif">Initializing...</div>
+    <div class="loading-progress" style="margin-top:12px;width:120px;height:2px;background:rgba(255,255,255,0.1);border-radius:1px;overflow:hidden;">
+        <div class="loading-progress-bar" style="height:100%;background:var(--accent);border-radius:1px;transition:width 0.5s ease;width:0%"></div>
+    </div>
 </div>
 
 <button class="theme-toggle" aria-label="Toggle dark/light mode" title="Toggle theme">
@@ -145,6 +149,7 @@
   </div>
 </div>
 
+<script src="brand-config.js?v=1.0"></script>
 <script src="atlas-viewer-lab.js?v=2.6.5"></script>
 <script>
     // Theme Toggle logic for demo pages

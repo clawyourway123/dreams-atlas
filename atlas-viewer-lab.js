@@ -28,6 +28,14 @@ let lastSearchResults = [];
 let compareMode = false;
 let comparisonAnchor = null;
 
+// Loading phase management
+const LOADING_PHASES = [
+    'Connecting to FAISS backend...',
+    'Loading chemical manifold...',
+    'Rendering 3D atlas...'
+];
+let currentLoadingPhase = 0;
+
 // RDKit-JS Integration
 let rdkitModule = null;
 async function initRDKit() {
@@ -64,13 +72,76 @@ function toggleSidebar() {
     if (sidebar) sidebar.classList.toggle('collapsed');
 }
 
+function advanceLoadingPhase() {
+    if (currentLoadingPhase >= LOADING_PHASES.length) return;
+    const shimmerEl = document.querySelector('.loading-shimmer');
+    const progressBar = document.querySelector('.loading-progress-bar');
+    if (shimmerEl) shimmerEl.textContent = LOADING_PHASES[currentLoadingPhase];
+    if (progressBar) progressBar.style.width = ((currentLoadingPhase + 1) / LOADING_PHASES.length * 100) + '%';
+    currentLoadingPhase++;
+}
+
 function hideLoadingOverlay() {
     console.log("Hiding loading overlay...");
+    const progressBar = document.querySelector('.loading-progress-bar');
+    if (progressBar) progressBar.style.width = '100%';
     const overlay = document.getElementById('loading-overlay');
     if (overlay) {
         overlay.style.opacity = '0';
         setTimeout(() => { overlay.style.display = 'none'; }, 500);
     }
+}
+
+// Animated counter utility
+function animateCounter(el, target, duration) {
+    function easeOutQuart(t) { return 1 - Math.pow(1 - t, 4); }
+    var start = performance.now();
+    function tick(now) {
+        var elapsed = now - start;
+        var progress = Math.min(elapsed / duration, 1);
+        var value = Math.round(easeOutQuart(progress) * target);
+        el.textContent = target >= 1000 ? value.toLocaleString() : value;
+        if (progress < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+}
+
+// Camera zoom to clicked point
+function zoomToPoint(x, y, z) {
+    var currentCamera = null;
+    var plotEl = document.getElementById('scatter3d');
+    if (plotEl && plotEl.layout && plotEl.layout.scene) {
+        currentCamera = plotEl.layout.scene.camera || {};
+    }
+    var startEye = (currentCamera && currentCamera.eye) || { x: 1.4, y: 1.4, z: 1.4 };
+    // Target: closer to the point but offset
+    var dist = 0.6;
+    var dx = x, dy = y, dz = z;
+    var len = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1;
+    var targetEye = {
+        x: x + (dx / len) * dist,
+        y: y + (dy / len) * dist,
+        z: z + (dz / len) * dist
+    };
+
+    var duration = 600;
+    var startTime = performance.now();
+
+    function lerp(a, b, t) { return a + (b - a) * t; }
+    function easeInOut(t) { return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; }
+
+    function step(now) {
+        var t = Math.min((now - startTime) / duration, 1);
+        var e = easeInOut(t);
+        var eye = {
+            x: lerp(startEye.x, targetEye.x, e),
+            y: lerp(startEye.y, targetEye.y, e),
+            z: lerp(startEye.z, targetEye.z, e)
+        };
+        Plotly.relayout('scatter3d', { 'scene.camera.eye': eye });
+        if (t < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
 }
 
 async function trackEvent(event, meta = {}) {
@@ -102,6 +173,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function generateLabData() {
     try {
+        advanceLoadingPhase(); // Phase 1: Connecting
         const res = await fetch('atlas_data.json?v=' + Date.now());
         const json = await res.json();
         labAtlasData = json;
@@ -122,6 +194,8 @@ async function generateLabData() {
             ids[i] = d.id;
         }
 
+        advanceLoadingPhase(); // Phase 2: Loading manifold
+
         const baseTrace = {
             x, y, z, mode: 'markers', text: ids, hoverinfo: 'text',
             marker: { size: 3, color: colors, colorscale: 'Viridis', opacity: 0.65, line: {width: 0} },
@@ -138,6 +212,8 @@ async function generateLabData() {
             throw new Error("Plotly not loaded");
         }
 
+        advanceLoadingPhase(); // Phase 3: Rendering
+
         await Plotly.newPlot('scatter3d', [baseTrace, highlightTrace], labLayout, {responsive: true, displayModeBar: false});
         hideLoadingOverlay();
         setTimeout(() => Plotly.Plots.resize('scatter3d'), 100);
@@ -147,15 +223,26 @@ async function generateLabData() {
             const pt = data.points[0];
             const selectedId = (pt.curveNumber === 0 && ids[pt.pointNumber]) ? ids[pt.pointNumber] : pt.text;
             if (!selectedId) return;
-            
+
             labCurrentSelectedId = selectedId;
             trackEvent('atlas_click', { id: selectedId });
-            
+
+            // Camera zoom to clicked point
+            const idx = labIdToIdx.get(selectedId);
+            if (idx !== undefined) {
+                const d = labAtlasData[idx];
+                zoomToPoint(d.x, d.y, d.z);
+            }
+
+            // Show details panel with slide-in
+            const panel = document.getElementById('details-panel');
+            if (panel) { panel.style.display = 'block'; panel.classList.add('visible'); }
+
             const select = document.getElementById('specSelect');
             if (select) select.value = selectedId;
 
             updateLabDetails(selectedId);
-            
+
             if (compareMode && comparisonAnchor && selectedId !== comparisonAnchor.id) {
                 runComparison(selectedId);
             } else {
@@ -341,7 +428,14 @@ async function labHighlightSimilarFAISS(id) {
         });
     }
 
+    // Dim base trace to make highlights pop, then restore
+    Plotly.restyle('scatter3d', { 'marker.opacity': 0.25 }, [0]);
     Plotly.restyle('scatter3d', { x: [hX], y: [hY], z: [hZ], text: [hText], 'marker.color': [hColor], 'marker.size': [hSize] }, [1]);
+
+    // Fade base trace back after a moment
+    setTimeout(() => {
+        Plotly.restyle('scatter3d', { 'marker.opacity': 0.65 }, [0]);
+    }, 1200);
 }
 
 function exportResultsAsCSV() {
