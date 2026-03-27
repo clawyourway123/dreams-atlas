@@ -1,0 +1,34 @@
+[
+  {
+    "path": "/",
+    "resourceSizes": [
+      {
+        "resourceType": "script",
+        "budget": 2000
+      },
+      {
+        "resourceType": "total",
+        "budget": 5000
+      }
+    ],
+    "resourceCounts": [
+      {
+        "resourceType": "third-party",
+        "budget": 20
+      }
+    ]
+  },
+  {
+    "path": "/*_demo.html",
+    "resourceSizes": [
+        {
+          "resourceType": "script",
+          "budget": 5000
+        },
+        {
+          "resourceType": "total",
+          "budget": 10000
+        }
+      ]
+  }
+]

@@ -84,13 +84,13 @@ index = None
 vectors = None
 id_map: dict[int, str] = {}
 reverse_map: dict[str, int] = {}
-faiss_available = True
+faiss_available = False
 
 try:
     import faiss
-except ImportError:
+    faiss_available = True
+except Exception:
     faiss = None  # type: ignore[assignment]
-    faiss_available = False
     logger.warning("faiss-cpu not available — search will use numpy fallback")
 
 
@@ -219,11 +219,15 @@ def load_data(retries=3):
                     reverse_map[f"ID_{i}"] = i
 
             if faiss_available and faiss is not None:
-                d = vectors.shape[1]
-                index = faiss.IndexFlatL2(d)
-                index.add(vectors)
-                logger.info(f"FAISS index built: {index.ntotal}")
-            else:
+                try:
+                    d = vectors.shape[1]
+                    index = faiss.IndexFlatL2(d)
+                    index.add(vectors)
+                    logger.info(f"FAISS index built: {index.ntotal}")
+                except Exception as faiss_err:
+                    index = None
+                    logger.warning(f"FAISS index build failed ({faiss_err}) — using numpy fallback")
+            if index is None:
                 logger.info("Using numpy search")
 
             return
@@ -319,7 +323,7 @@ async def api_key_middleware(request: Request, call_next):
 # ---------------------------------------------------------------------------
 @app.get("/healthz")
 def healthz():
-    return {"status": "alive", "vectors": len(id_map), "faiss": faiss_available}
+    return {"status": "alive", "vectors": len(id_map), "faiss": index is not None}
 
 
 @app.get("/api/status")
@@ -546,69 +550,16 @@ def get_smiles(id: str):
 
 @app.get("/api/safety/score")
 def safety_score(id: str):
-    """Predictive ADMET and safety scoring (Mock - Tox21/ClinTox integration)."""
-    clean_id = validate_search_id(id)
-
-    # Deterministic mock scoring based on ID hash
-    h = hash(clean_id)
-    tox21_score = round(0.5 + (h % 50) / 100.0, 2)  # 0.5 - 0.99
-    clintox_pass = (h % 10) > 1  # 80% pass rate
-
-    # CYP450 Liabilities (Red Flags)
-    liabilities = []
-    if h % 7 == 0:
-        liabilities.append("CYP3A4 Inhibition")
-    if h % 11 == 0:
-        liabilities.append("hERG Channel Blockade")
-    if h % 13 == 0:
-        liabilities.append("Hepatotoxicity Risk")
-
-    # BBB Penetration
-    bbb_prob = round((h % 100) / 100.0, 2)
-
-    return {
-        "id": clean_id,
-        "tox21_safety_score": tox21_score,
-        "clintox_status": "PASS" if clintox_pass else "FAIL",
-        "red_flags": liabilities,
-        "admet": {
-            "logP": round(1.0 + (h % 40) / 10.0, 2),
-            "molecular_weight": 200 + (h % 500),
-            "bbb_penetration": bbb_prob,
-            "h_bond_donors": h % 5,
-            "h_bond_acceptors": h % 10
-        },
-        "mpo_score": round((tox21_score + bbb_prob + (1 if clintox_pass else 0)) / 3.0, 2)
-    }
+    """ADMET and safety scoring — roadmap feature."""
+    validate_search_id(id)
+    return {"status": "coming_soon", "feature": "Predictive ADMET & Safety Scoring", "eta": "Q3 2026", "contact": "hello@gstack.ai"}
 
 
 @app.get("/api/safety/sds")
 def safety_sds(id: str):
-    """Generate a mock Safety Data Sheet (SDS) for a molecule."""
-    clean_id = validate_search_id(id)
-    return {
-        "id": clean_id,
-        "document_type": "Safety Data Sheet (Draft)",
-        "version": "2026.1",
-        "sections": {
-            "1_identification": f"Product: {clean_id} (DreaMS De Novo Candidate)",
-            "2_hazard_identification": (
-                "GHS Category 4: Harmful if swallowed. Potential skin irritant."
-            ),
-            "3_composition": f"Pure substance: {clean_id} (>98% purity target)",
-            "4_first_aid": (
-                "In case of contact, flush with water. Seek medical attention if symptoms persist."
-            ),
-            "8_exposure_controls": (
-                "Wear appropriate PPE (gloves, safety glasses, lab coat). "
-                "Handle in a well-ventilated fume hood."
-            )
-        },
-        "disclaimer": (
-            "This is a predicted SDS based on ML models and "
-            "has not been verified by physical testing."
-        )
-    }
+    """Safety Data Sheet generation — roadmap feature."""
+    validate_search_id(id)
+    return {"status": "coming_soon", "feature": "Safety Data Sheet Generation", "eta": "Q3 2026", "contact": "hello@gstack.ai"}
 
 # ---------------------------------------------------------------------------
 # Phase 21: High-Throughput Screening (HTS) & Assay Data Fusion
@@ -617,28 +568,9 @@ def safety_sds(id: str):
 
 @app.get("/api/hts/assay")
 def hts_assay(id: str):
-    """Mock HTS Assay data (Dose-response, IC50)."""
-    clean_id = validate_search_id(id)
-    h = hash(clean_id)
-
-    # Generate mock dose-response points
-    doses = [0.01, 0.1, 1.0, 10.0, 100.0]
-    # Simple sigmoid: 100 / (1 + (dose/IC50)^slope)
-    ic50 = 0.5 + (h % 50) / 10.0
-    slope = 1.0
-    responses = [round(100 / (1 + (d/ic50)**slope), 2) for d in doses]
-
-    return {
-        "id": clean_id,
-        "assay_type": "Kinase Inhibition (Mock)",
-        "ic50_um": ic50,
-        "unit": "uM",
-        "dose_response": {
-            "doses": doses,
-            "responses": responses
-        },
-        "outlier_status": "NORMAL" if (h % 20) > 0 else "FLAGGED_OUTLIER"
-    }
+    """HTS assay data fusion — roadmap feature."""
+    validate_search_id(id)
+    return {"status": "coming_soon", "feature": "High-Throughput Screening Assay Data", "eta": "Q3 2026", "contact": "hello@gstack.ai"}
 
 
 @app.get("/api/hts/sar")

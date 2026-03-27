@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DreaMS Sales CRM | Lead Intel</title>
+    <link rel="stylesheet" href="atlas.css">
+    <style>
+        body { padding: 40px; }
+        .dashboard { max-width: 1000px; margin: 0 auto; }
+        .log-item { padding: 12px; border-bottom: 1px solid var(--border-color); font-family: monospace; font-size: 12px; }
+        .lead-card { background: var(--panel-bg); padding: 20px; border-radius: 12px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <h1>Sales Intelligence Dashboard</h1>
+        <p style="color:var(--text-dim)">Real-time tracking of enterprise demo interactions.</p>
+
+        <div class="lead-card">
+            <h2>Recent Activity</h2>
+            <div id="logOutput">Loading system logs...</div>
+        </div>
+
+        <div class="lead-card">
+            <h2>Lead Pipeline (Mock)</h2>
+            <table style="width:100%; text-align:left;">
+                <tr><th>Company</th><th>Demo Interactions</th><th>Status</th></tr>
+                <tr><td>Henkel</td><td>42</td><td><span style="color:var(--accent)">HOT</span></td></tr>
+                <tr><td>3M</td><td>12</td><td>Warm</td></tr>
+                <tr><td>BASF</td><td>5</td><td>Cold</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const FAISS_BASE_URL = "https://dreams-atlas.onrender.com";
+        async function fetchLogs() {
+            try {
+                const res = await fetch(`${FAISS_BASE_URL}/api/logs`);
+                const logs = await res.json();
+                const out = document.getElementById('logOutput');
+                out.innerHTML = logs.map(l => `
+                    <div class="log-item">
+                        <span style="color:var(--accent)">[${l.time}]</span> ${l.message}
+                    </div>
+                `).join('');
+            } catch (e) {
+                document.getElementById('logOutput').innerText = "Failed to load logs.";
+            }
+        }
+        fetchLogs();
+        setInterval(fetchLogs, 5000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.coverage
+coverage.xml
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# Large binary / generated data
+embeddings_checkpoint.npy
+*.npy
+
+# Vault (runtime-generated encrypted data)
+vault/
+
+# API keys / secrets
+config/api_keys.json
+
+# Claude memory
+memory/
+MEMORY.md
+
+# Node
+node_modules/
