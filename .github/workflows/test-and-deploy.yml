@@ -32,12 +32,10 @@ jobs:
       - name: Lint backend (flake8)
         run: |
           flake8 backend/ --max-line-length=100 --extend-ignore=E203,W503
-        continue-on-error: true
-      
+
       - name: Run backend tests
         run: |
           pytest backend/tests/ -v --cov=backend --cov-report=xml
-        continue-on-error: true
       
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
@@ -57,12 +55,10 @@ jobs:
       - name: Lint frontend JS
         run: |
           npx eslint atlas-viewer-lab.js --fix --max-warnings=5
-        continue-on-error: true
-      
+
       - name: Validate HTML
         run: |
           npx html-validate index.html henkel_demo.html
-        continue-on-error: true
   
   security-scan:
     name: Security Scan
