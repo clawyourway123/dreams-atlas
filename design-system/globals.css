@@ -1,0 +1,423 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ════════════════════════════════════════════
+   DREAMS Atlas — Global Styles
+   K-Dense Science Lab Design System
+   ════════════════════════════════════════════ */
+
+@layer base {
+  :root {
+    --color-navy-900: #1e293b;
+    --color-navy-950: #171f2e;
+    --color-teal-400: #2dd4bf;
+    --color-teal-500: #14b8a6;
+    --color-surface: #243b53;
+    --color-surface-light: #2d4a63;
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply bg-navy-950 text-white font-body antialiased;
+  }
+
+  /* Headings default */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading font-bold tracking-tight;
+  }
+
+  /* Selection color */
+  ::selection {
+    @apply bg-teal-400/30 text-white;
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    @apply w-2;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-navy-950;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-navy-700 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-navy-600;
+  }
+}
+
+@layer components {
+  /* ──────────────── Navigation ──────────────── */
+  .nav {
+    @apply fixed top-0 left-0 right-0 z-50
+           bg-navy-950/80 backdrop-blur-md
+           border-b border-white/5;
+  }
+
+  .nav-container {
+    @apply max-w-content-wide mx-auto px-6 h-16
+           flex items-center justify-between;
+  }
+
+  .nav-logo {
+    @apply text-heading-sm font-heading font-bold text-white
+           flex items-center gap-3;
+  }
+
+  .nav-logo-mark {
+    @apply w-8 h-8 bg-teal-gradient rounded-lg
+           flex items-center justify-center
+           text-navy-950 font-bold text-body-sm;
+  }
+
+  .nav-links {
+    @apply hidden md:flex items-center gap-8;
+  }
+
+  .nav-link {
+    @apply text-body-sm text-navy-300 font-medium
+           transition-colors duration-200
+           hover:text-white;
+  }
+
+  .nav-link-active {
+    @apply text-teal-400;
+  }
+
+  .nav-cta {
+    @apply btn-primary text-body-sm py-2 px-5;
+  }
+
+  /* ──────────────── Hero Section ──────────────── */
+  .hero {
+    @apply relative min-h-screen flex items-center
+           bg-hero-gradient overflow-hidden;
+  }
+
+  .hero-container {
+    @apply max-w-content-wide mx-auto px-6 py-30
+           text-center;
+  }
+
+  .hero-badge {
+    @apply inline-flex items-center gap-2
+           bg-teal-400/10 text-teal-400
+           text-caption font-semibold uppercase tracking-widest
+           px-4 py-1.5 rounded-pill
+           border border-teal-400/20
+           mb-8;
+  }
+
+  .hero-title {
+    @apply text-display-lg md:text-display-xl font-heading font-bold
+           text-white leading-tight
+           mb-6;
+  }
+
+  .hero-subtitle {
+    @apply text-body-lg md:text-heading-sm text-navy-300
+           max-w-content-narrow mx-auto
+           mb-10;
+  }
+
+  .hero-divider {
+    @apply w-24 h-1 bg-teal-gradient rounded-full mx-auto mb-10;
+  }
+
+  .hero-actions {
+    @apply flex flex-col sm:flex-row items-center justify-center gap-4;
+  }
+
+  /* ──────────────── Buttons ──────────────── */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2
+           bg-teal-gradient text-navy-950
+           font-heading font-semibold text-body-md
+           px-8 py-3.5 rounded-card
+           shadow-glow
+           transition-all duration-300 ease-out
+           hover:shadow-glow-strong hover:scale-[1.02]
+           active:scale-[0.98];
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2
+           bg-transparent text-white
+           font-heading font-semibold text-body-md
+           px-8 py-3.5 rounded-card
+           border border-white/20
+           transition-all duration-300 ease-out
+           hover:bg-white/5 hover:border-white/30;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2
+           bg-transparent text-teal-400
+           font-heading font-medium text-body-md
+           px-6 py-2.5 rounded-card
+           transition-all duration-200
+           hover:bg-teal-400/10;
+  }
+
+  .btn-icon {
+    @apply inline-flex items-center justify-center
+           w-10 h-10 rounded-card
+           bg-surface text-navy-300
+           transition-all duration-200
+           hover:bg-surface-light hover:text-white;
+  }
+
+  /* ──────────────── Section Layout ──────────────── */
+  .section {
+    @apply py-section-md md:py-section-lg;
+  }
+
+  .section-container {
+    @apply max-w-content-wide mx-auto px-6;
+  }
+
+  .section-header {
+    @apply text-center mb-16;
+  }
+
+  .section-overline {
+    @apply text-overline text-teal-400 uppercase tracking-widest mb-3 block;
+  }
+
+  .section-title {
+    @apply text-heading-xl md:text-display-md font-heading font-bold text-white mb-4;
+  }
+
+  .section-subtitle {
+    @apply text-body-lg text-navy-300 max-w-content-narrow mx-auto;
+  }
+
+  .section-divider {
+    @apply w-16 h-1 bg-teal-gradient rounded-full mx-auto mt-6;
+  }
+
+  /* Alternating section backgrounds */
+  .section-alt {
+    @apply bg-section-gradient;
+  }
+
+  /* ──────────────── Feature Cards ──────────────── */
+  .feature-card {
+    @apply relative p-8 rounded-panel
+           bg-surface/60 backdrop-blur-sm
+           border border-white/5
+           shadow-card shadow-inner-light
+           transition-all duration-300 ease-out
+           hover:shadow-card-hover hover:border-teal-400/20
+           hover:bg-surface/80;
+  }
+
+  .feature-card-icon {
+    @apply w-12 h-12 rounded-card
+           bg-teal-400/10 text-teal-400
+           flex items-center justify-center
+           mb-5;
+  }
+
+  .feature-card-title {
+    @apply text-heading-sm font-heading font-semibold text-white mb-3;
+  }
+
+  .feature-card-description {
+    @apply text-body-md text-navy-300 leading-relaxed;
+  }
+
+  /* ──────────────── Stat / Metric Cards ──────────────── */
+  .stat-card {
+    @apply p-6 rounded-panel bg-surface/40 border border-white/5
+           text-center;
+  }
+
+  .stat-value {
+    @apply text-display-md font-heading font-bold text-teal-400 mb-1;
+  }
+
+  .stat-label {
+    @apply text-body-sm text-navy-300;
+  }
+
+  .stat-sublabel {
+    @apply text-caption text-navy-400 mt-1;
+  }
+
+  /* ──────────────── Team Cards ──────────────── */
+  .team-card {
+    @apply relative p-6 rounded-panel
+           bg-surface/40 border border-white/5
+           text-center
+           transition-all duration-300
+           hover:border-teal-400/20 hover:bg-surface/60;
+  }
+
+  .team-card-avatar {
+    @apply w-20 h-20 rounded-full mx-auto mb-4
+           bg-gradient-to-br from-teal-400/20 to-navy-700
+           border-2 border-teal-400/30
+           flex items-center justify-center
+           text-heading-md text-teal-400 font-heading font-bold;
+  }
+
+  .team-card-name {
+    @apply text-heading-sm font-heading font-semibold text-white mb-1;
+  }
+
+  .team-card-role {
+    @apply text-body-sm text-teal-400 font-medium mb-2;
+  }
+
+  .team-card-description {
+    @apply text-body-sm text-navy-300;
+  }
+
+  /* ──────────────── Data Tables (matches pitch deck style) ──────────────── */
+  .data-table {
+    @apply w-full border-collapse rounded-panel overflow-hidden;
+  }
+
+  .data-table thead {
+    @apply bg-navy-900;
+  }
+
+  .data-table th {
+    @apply px-6 py-3.5 text-left text-body-sm font-heading font-semibold
+           text-white tracking-wide;
+  }
+
+  .data-table tbody tr {
+    @apply border-t border-white/5
+           transition-colors duration-150
+           hover:bg-white/[0.02];
+  }
+
+  .data-table td {
+    @apply px-6 py-3.5 text-body-sm text-navy-200;
+  }
+
+  /* Teal header variant (from pitch deck market/pricing tables) */
+  .data-table-teal thead {
+    @apply bg-teal-600;
+  }
+
+  /* ──────────────── Adhesive Category Pills ──────────────── */
+  .category-pill {
+    @apply inline-flex items-center px-5 py-2.5
+           rounded-card text-body-sm font-medium
+           bg-teal-500 text-white
+           transition-all duration-200
+           hover:bg-teal-400 hover:scale-105;
+  }
+
+  /* ──────────────── CTA / Banner Section ──────────────── */
+  .cta-banner {
+    @apply relative py-section-md overflow-hidden;
+  }
+
+  .cta-banner-inner {
+    @apply max-w-content-default mx-auto px-6 text-center
+           relative z-10;
+  }
+
+  .cta-banner-bg {
+    @apply absolute inset-0 bg-teal-gradient opacity-5;
+  }
+
+  .cta-banner-title {
+    @apply text-heading-xl md:text-display-md font-heading font-bold text-white mb-4;
+  }
+
+  .cta-banner-subtitle {
+    @apply text-body-lg text-navy-300 mb-8 max-w-content-narrow mx-auto;
+  }
+
+  /* ──────────────── Footer ──────────────── */
+  .footer {
+    @apply bg-navy-950 border-t border-white/5 py-16;
+  }
+
+  .footer-container {
+    @apply max-w-content-wide mx-auto px-6;
+  }
+
+  .footer-brand {
+    @apply text-navy-400 text-body-sm;
+  }
+
+  .footer-link {
+    @apply text-navy-400 text-body-sm transition-colors
+           hover:text-teal-400;
+  }
+
+  /* ──────────────── Spectral Visualization Section ──────────────── */
+  .spectral-chart-container {
+    @apply p-6 rounded-panel bg-surface/30
+           border border-white/5;
+  }
+
+  .spectral-chart-label {
+    @apply text-caption text-navy-400 font-mono;
+  }
+
+  .spectral-chart-axis {
+    @apply text-caption text-navy-500;
+  }
+
+  /* ──────────────── Tag / Badge ──────────────── */
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5
+           rounded-pill text-caption font-medium;
+  }
+
+  .badge-teal {
+    @apply bg-teal-400/10 text-teal-400 border border-teal-400/20;
+  }
+
+  .badge-navy {
+    @apply bg-navy-700/50 text-navy-200 border border-navy-600/30;
+  }
+
+  .badge-success {
+    @apply bg-green-500/10 text-green-400 border border-green-500/20;
+  }
+}
+
+@layer utilities {
+  /* Text gradient for emphasis */
+  .text-gradient-teal {
+    @apply bg-clip-text text-transparent bg-teal-gradient;
+  }
+
+  /* Subtle grid background pattern */
+  .bg-grid {
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    background-size: 64px 64px;
+  }
+
+  /* Dot pattern background */
+  .bg-dots {
+    background-image: radial-gradient(
+      rgba(45, 212, 191, 0.07) 1px,
+      transparent 1px
+    );
+    background-size: 32px 32px;
+  }
+
+  /* Glow effect behind elements */
+  .glow-teal {
+    @apply relative;
+  }
+  .glow-teal::before {
+    content: "";
+    @apply absolute -inset-4 bg-teal-400/10 rounded-full blur-3xl -z-10;
+  }
+}

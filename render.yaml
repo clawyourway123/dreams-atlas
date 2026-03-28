@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: dreams-atlas
+    name: dreams-atlas-api
     env: python
     region: oregon
     plan: free
@@ -10,3 +10,21 @@ services:
     envVars:
       - key: PYTHONUNBUFFERED
         value: "1"
+
+  - type: web
+    name: dreams-atlas
+    runtime: node
+    plan: free
+    rootDir: dreams-atlas
+    buildCommand: bash scripts/render-build.sh
+    startCommand: node .next/standalone/server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "10000"
+      - key: HOSTNAME
+        value: "0.0.0.0"
+      - key: NEXT_TELEMETRY_DISABLED
+        value: "1"
+    healthCheckPath: /

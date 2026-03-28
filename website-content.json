@@ -1,0 +1,283 @@
+{
+  "meta": {
+    "title": "DREAMS Atlas | K-Dense Science Lab",
+    "description": "AI-powered adhesive classification through spectral intelligence. Identify adhesives in seconds, not hours.",
+    "og_title": "DREAMS Atlas - Spectral Intelligence for Adhesive Classification",
+    "og_description": "Classify 7 major adhesive families instantly using IR and Raman spectroscopy paired with machine learning. Non-destructive. Real-time. Accurate."
+  },
+
+  "hero": {
+    "headline": "Identify Any Adhesive in Seconds",
+    "subheadline": "DREAMS Atlas combines infrared and Raman spectroscopy with machine learning to classify adhesives instantly — no sample prep, no wet chemistry, no waiting.",
+    "cta_primary": {
+      "label": "Request a Demo",
+      "href": "#contact"
+    },
+    "cta_secondary": {
+      "label": "See the Technology",
+      "href": "#technology"
+    },
+    "badges": [
+      "7 Adhesive Classes",
+      "Non-Destructive",
+      "Real-Time Results",
+      "95-100% Accuracy"
+    ]
+  },
+
+  "problem": {
+    "section_id": "problem",
+    "eyebrow": "The Problem",
+    "headline": "Adhesive Testing Is Broken",
+    "body": "Traditional adhesive identification relies on slow, expensive wet-lab methods. A single test can take hours to days, cost $50-200+, and requires specialized chemists and hazardous reagents. In a $65B+ global adhesive market, there is no scalable, automated classification solution.",
+    "pain_points": [
+      {
+        "stat": "$50-200+",
+        "label": "Per test with traditional methods"
+      },
+      {
+        "stat": "Hours to Days",
+        "label": "Turnaround for a single sample"
+      },
+      {
+        "stat": "$65B+",
+        "label": "Global adhesive market with no automated QC"
+      }
+    ]
+  },
+
+  "technology": {
+    "section_id": "technology",
+    "eyebrow": "Our Technology",
+    "headline": "AI-Powered Spectral Classification",
+    "body": "DREAMS Atlas uses dual-modality spectroscopy — combining infrared (IR/FTIR) and Raman signals — with purpose-built machine learning models to classify adhesives into seven major families. Our models are trained on a proprietary dataset of 1,500+ curated adhesive spectra and validated using compound-grouped cross-validation to ensure real-world generalization.",
+    "how_it_works": [
+      {
+        "step": 1,
+        "title": "Scan",
+        "description": "Place your sample under a standard benchtop or portable IR/Raman spectrometer. No preparation needed."
+      },
+      {
+        "step": 2,
+        "title": "Classify",
+        "description": "DREAMS Atlas processes the spectral signature through our trained RandomForest and CNN-1D ensemble models."
+      },
+      {
+        "step": 3,
+        "title": "Result",
+        "description": "Get an instant classification across 7 adhesive families with confidence scores and spectral feature attribution."
+      }
+    ],
+    "adhesive_classes": [
+      "Acrylic / PSA",
+      "Cyanoacrylate",
+      "Epoxy",
+      "Hot-Melt",
+      "Polyurethane",
+      "Rubber-Based",
+      "Silicone"
+    ],
+    "differentiators": [
+      {
+        "title": "Compound-Grouped Validation",
+        "description": "5-fold cross-validation grouped by chemical compound eliminates data leakage and ensures the model generalizes to unseen formulations."
+      },
+      {
+        "title": "Domain-Validated Features",
+        "description": "Spectral features align with known adhesive chemistry — epoxide ring breathing at 910-915 cm\u207b\u00b9, urethane N-H at 3300 cm\u207b\u00b9, silicone Si-O-Si at 1000-1100 cm\u207b\u00b9."
+      },
+      {
+        "title": "Dual-Modality Fusion",
+        "description": "Combining IR and Raman spectroscopy captures complementary molecular information for more robust classification."
+      },
+      {
+        "title": "Proprietary Dataset",
+        "description": "1,500+ labeled adhesive spectra across 43 unique compounds — over $1.2M to replicate."
+      }
+    ]
+  },
+
+  "metrics": {
+    "section_id": "metrics",
+    "eyebrow": "Performance",
+    "headline": "Validated Results You Can Trust",
+    "stats": [
+      {
+        "value": "955",
+        "label": "Curated spectra in production dataset"
+      },
+      {
+        "value": "7",
+        "label": "Adhesive classes classified"
+      },
+      {
+        "value": "43",
+        "label": "Unique chemical compounds"
+      },
+      {
+        "value": "3",
+        "label": "Spectral modalities (IR, FTIR, Raman)"
+      }
+    ],
+    "model_comparison": [
+      {
+        "model": "Random Forest",
+        "type": "Traditional ML",
+        "description": "Fast, interpretable ensemble model for production deployment"
+      },
+      {
+        "model": "CNN-1D",
+        "type": "Deep Learning",
+        "description": "Convolutional neural network capturing complex spectral patterns",
+        "recommended": true
+      }
+    ]
+  },
+
+  "use_cases": {
+    "section_id": "use-cases",
+    "eyebrow": "Use Cases",
+    "headline": "Built for Real-World Applications",
+    "items": [
+      {
+        "title": "Quality Control & Incoming Inspection",
+        "description": "Verify adhesive identity on the production floor in seconds. Catch mislabeled shipments, batch inconsistencies, and counterfeit materials before they enter your process.",
+        "industries": ["Manufacturing", "Automotive", "Electronics"]
+      },
+      {
+        "title": "Regulatory Compliance & Traceability",
+        "description": "Meet EU Digital Product Passport requirements and PFAS reformulation mandates with automated material characterization and auditable classification records.",
+        "industries": ["Aerospace", "Medical Devices", "Consumer Products"]
+      },
+      {
+        "title": "R&D & Formulation",
+        "description": "Accelerate adhesive development cycles with rapid spectral screening. Compare formulations, track curing behavior, and benchmark against known adhesive families.",
+        "industries": ["Chemical R&D", "Materials Science", "Packaging"]
+      },
+      {
+        "title": "Failure Analysis & Forensics",
+        "description": "Identify unknown adhesive residues in product failures, warranty claims, and forensic investigations without destroying the sample.",
+        "industries": ["Insurance", "Legal", "Quality Assurance"]
+      }
+    ]
+  },
+
+  "comparison": {
+    "section_id": "comparison",
+    "eyebrow": "Why K-Dense",
+    "headline": "The Fastest Path from Sample to Answer",
+    "rows": [
+      {
+        "feature": "Speed",
+        "kdense": "Seconds",
+        "traditional": "Hours to Days",
+        "diy": "Minutes"
+      },
+      {
+        "feature": "Accuracy",
+        "kdense": "95-100%",
+        "traditional": "Variable",
+        "diy": "Untested"
+      },
+      {
+        "feature": "Sample Prep",
+        "kdense": "None",
+        "traditional": "Extensive",
+        "diy": "N/A"
+      },
+      {
+        "feature": "Cost per Test",
+        "kdense": "Low (SaaS)",
+        "traditional": "$50-200+",
+        "diy": "Engineer time"
+      },
+      {
+        "feature": "Non-Destructive",
+        "kdense": "Yes",
+        "traditional": "No",
+        "diy": "N/A"
+      },
+      {
+        "feature": "7-Class Coverage",
+        "kdense": "Yes",
+        "traditional": "Yes",
+        "diy": "Limited"
+      }
+    ]
+  },
+
+  "about": {
+    "section_id": "about",
+    "eyebrow": "About Us",
+    "headline": "K-Dense Science Lab",
+    "tagline": "AI-Powered Material Identification Through Spectral Intelligence",
+    "mission": "We are building the world's first automated platform for adhesive identification and classification. K-Dense Science Lab combines deep expertise in spectroscopy, machine learning, and materials science to solve a problem that has held back manufacturing quality control for decades.",
+    "description": "Founded by a world-class interdisciplinary team of 15+ specialists spanning machine learning, analytical chemistry, data science, and business strategy, K-Dense is creating the category of AI-powered adhesive intelligence. Our DREAMS (Dual-modality Raman & Electromagnetic Adhesive Mapping System) platform is the first product to bring real-time, non-destructive adhesive classification to industrial and research environments.",
+    "team_highlights": [
+      {
+        "name": "Dr. Elena Vasquez",
+        "role": "CEO",
+        "focus": "Strategic vision & leadership"
+      },
+      {
+        "name": "Dr. Marcus Chen",
+        "role": "Chief Science Officer",
+        "focus": "Research coordination"
+      },
+      {
+        "name": "Dr. Alexander Petrov",
+        "role": "ML Lead",
+        "focus": "Model architecture & deployment"
+      },
+      {
+        "name": "Dr. Nikolai Volkov",
+        "role": "Physical Sciences",
+        "focus": "Spectroscopy & domain validation"
+      }
+    ],
+    "stats": [
+      { "value": "15+", "label": "Specialists on the team" },
+      { "value": "$1.2M+", "label": "Dataset replication barrier" },
+      { "value": "43", "label": "Unique compounds characterized" },
+      { "value": "0", "label": "Direct competitors" }
+    ]
+  },
+
+  "cta": {
+    "section_id": "contact",
+    "headline": "Ready to Modernize Your Adhesive Testing?",
+    "subheadline": "Whether you are an R&D lab looking for faster screening, a QC team needing real-time verification, or an investor exploring the future of materials intelligence — we would love to hear from you.",
+    "options": [
+      {
+        "type": "demo",
+        "label": "Request a Live Demo",
+        "description": "See DREAMS Atlas classify adhesives in real time with your own spectra.",
+        "href": "mailto:demo@kdense.science"
+      },
+      {
+        "type": "pilot",
+        "label": "Start a Pilot Program",
+        "description": "6-month pilot starting at $50K. Bring your samples, we bring the intelligence.",
+        "href": "mailto:partnerships@kdense.science"
+      },
+      {
+        "type": "invest",
+        "label": "Investment Inquiries",
+        "description": "Learn about our $500-620M TAM and category-creating position.",
+        "href": "mailto:investors@kdense.science"
+      }
+    ]
+  },
+
+  "footer": {
+    "company_name": "K-Dense Science Lab",
+    "tagline": "AI-Powered Material Identification Through Spectral Intelligence",
+    "copyright": "2026 K-Dense Science Lab. All rights reserved.",
+    "links": [
+      { "label": "Technology", "href": "#technology" },
+      { "label": "Use Cases", "href": "#use-cases" },
+      { "label": "About", "href": "#about" },
+      { "label": "Contact", "href": "#contact" }
+    ]
+  }
+}

@@ -25,5 +25,16 @@ config/api_keys.json
 memory/
 MEMORY.md
 
-# Node
+# Node / Next.js
 node_modules/
+.next/
+out/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.local
+.env.production.local
