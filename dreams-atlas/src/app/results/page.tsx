@@ -44,9 +44,9 @@ const models = [
 
 function MetricCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg bg-gray-50 p-4 text-center">
-      <p className="text-2xl font-bold text-primary-700">{value}</p>
-      <p className="mt-1 text-xs font-medium uppercase tracking-wider text-gray-500">
+    <div className="rounded-card bg-surface/40 border border-white/5 p-4 text-center">
+      <p className="text-2xl font-bold text-teal-400">{value}</p>
+      <p className="mt-1 text-xs font-medium uppercase tracking-wider text-navy-400">
         {label}
       </p>
     </div>
@@ -57,17 +57,17 @@ export default function ResultsPage() {
   return (
     <>
       {/* Header */}
-      <section className="bg-gradient-to-b from-gray-50 to-white py-20 sm:py-28">
+      <section className="bg-gradient-to-b from-navy-900 to-navy-950 py-20 sm:py-28">
         <div className="section-container">
           <div className="mx-auto max-w-3xl text-center">
-            <p className="text-sm font-semibold uppercase tracking-widest text-primary-600">
+            <p className="text-sm font-semibold uppercase tracking-widest text-teal-400">
               Model Performance
             </p>
-            <h1 className="mt-3 text-4xl font-bold tracking-tight sm:text-5xl">
+            <h1 className="mt-3 text-4xl font-bold tracking-tight text-white sm:text-5xl">
               Evaluation{' '}
               <span className="gradient-text">Results</span>
             </h1>
-            <p className="mt-5 text-base leading-relaxed text-gray-600">
+            <p className="mt-5 text-base leading-relaxed text-navy-300">
               Models evaluated with compound-grouped 5-fold cross-validation on
               955 samples across 43 unique compounds. This rigorous protocol
               ensures no compound leakage between train and test sets.
@@ -77,25 +77,25 @@ export default function ResultsPage() {
       </section>
 
       {/* Models */}
-      <section className="py-16">
+      <section className="py-16 bg-navy-950">
         <div className="section-container space-y-12">
           {models.map((model) => (
             <div
               key={model.name}
-              className="overflow-hidden rounded-2xl border border-gray-100 shadow-sm"
+              className="overflow-hidden rounded-panel border border-white/5 shadow-card"
             >
-              <div className="flex items-center justify-between border-b border-gray-100 bg-white px-6 py-4">
+              <div className="flex items-center justify-between border-b border-white/5 bg-surface/60 px-6 py-4">
                 <div className="flex items-center gap-3">
-                  <h2 className="text-xl font-bold">{model.name}</h2>
+                  <h2 className="text-xl font-bold text-white">{model.name}</h2>
                   {model.recommended && (
-                    <span className="rounded-full bg-accent-100 px-3 py-0.5 text-xs font-semibold text-accent-700">
+                    <span className="rounded-pill bg-teal-400/10 px-3 py-0.5 text-xs font-semibold text-teal-400 border border-teal-400/20">
                       Recommended
                     </span>
                   )}
                 </div>
               </div>
-              <div className="bg-white p-6">
-                <p className="text-sm text-gray-600">{model.description}</p>
+              <div className="bg-surface/30 p-6">
+                <p className="text-sm text-navy-300">{model.description}</p>
 
                 {/* Metrics */}
                 <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -107,13 +107,13 @@ export default function ResultsPage() {
 
                 {/* Fold breakdown */}
                 <div className="mt-6">
-                  <h3 className="text-sm font-semibold text-gray-700">
+                  <h3 className="text-sm font-semibold text-navy-200">
                     Per-Fold Performance
                   </h3>
                   <div className="mt-3 overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="border-b border-gray-100 text-left text-xs uppercase tracking-wider text-gray-500">
+                        <tr className="border-b border-white/5 text-left text-xs uppercase tracking-wider text-navy-400">
                           <th className="pb-2 pr-4">Fold</th>
                           <th className="pb-2 pr-4">Accuracy</th>
                           <th className="pb-2">F1 (Macro)</th>
@@ -123,26 +123,26 @@ export default function ResultsPage() {
                         {model.folds.map((f) => (
                           <tr
                             key={f.fold}
-                            className="border-b border-gray-50"
+                            className="border-b border-white/5"
                           >
-                            <td className="py-2 pr-4 font-medium">
+                            <td className="py-2 pr-4 font-medium text-white">
                               Fold {f.fold}
                             </td>
                             <td className="py-2 pr-4">
                               <div className="flex items-center gap-2">
-                                <div className="h-2 w-24 overflow-hidden rounded-full bg-gray-100">
+                                <div className="h-2 w-24 overflow-hidden rounded-full bg-navy-700">
                                   <div
-                                    className="h-full rounded-full bg-primary-500"
+                                    className="h-full rounded-full bg-teal-500"
                                     style={{ width: `${Math.min(f.accuracy * 3, 100)}%` }}
                                   />
                                 </div>
-                                <span className="font-mono text-xs">
+                                <span className="font-mono text-xs text-navy-200">
                                   {f.accuracy.toFixed(1)}%
                                 </span>
                               </div>
                             </td>
                             <td className="py-2">
-                              <span className="font-mono text-xs">
+                              <span className="font-mono text-xs text-navy-200">
                                 {f.f1.toFixed(1)}%
                               </span>
                             </td>
@@ -159,13 +159,13 @@ export default function ResultsPage() {
       </section>
 
       {/* Note */}
-      <section className="bg-amber-50 py-12">
+      <section className="bg-amber-900/20 border-y border-amber-500/10 py-12">
         <div className="section-container">
           <div className="mx-auto max-w-2xl text-center">
-            <h3 className="text-lg font-semibold text-amber-800">
+            <h3 className="text-lg font-semibold text-amber-400">
               Early-Stage Models
             </h3>
-            <p className="mt-2 text-sm text-amber-700">
+            <p className="mt-2 text-sm text-amber-300/80">
               Current metrics reflect our initial dataset and compound-grouped
               validation. Active work on feature engineering, data augmentation,
               and architecture tuning targets production-grade accuracy. The
@@ -177,13 +177,13 @@ export default function ResultsPage() {
       </section>
 
       {/* Performance Visualizations */}
-      <section className="py-16">
+      <section className="py-16 bg-navy-950">
         <div className="section-container">
           <div className="text-center">
-            <h2 className="text-2xl font-bold tracking-tight">
+            <h2 className="text-2xl font-bold tracking-tight text-white">
               Confusion Matrix &amp; ROC Curves
             </h2>
-            <p className="mt-2 text-sm text-gray-600">
+            <p className="mt-2 text-sm text-navy-300">
               Per-class performance breakdown from compound-grouped
               cross-validation.
             </p>

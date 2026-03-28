@@ -58,17 +58,17 @@ export default function TechnologyPage() {
   return (
     <>
       {/* Header */}
-      <section className="bg-gradient-to-b from-gray-50 to-white py-20 sm:py-28">
+      <section className="bg-gradient-to-b from-navy-900 to-navy-950 py-20 sm:py-28">
         <div className="section-container">
           <div className="mx-auto max-w-3xl text-center">
-            <p className="text-sm font-semibold uppercase tracking-widest text-primary-600">
+            <p className="text-sm font-semibold uppercase tracking-widest text-teal-400">
               Our Approach
             </p>
-            <h1 className="mt-3 text-4xl font-bold tracking-tight sm:text-5xl">
+            <h1 className="mt-3 text-4xl font-bold tracking-tight text-white sm:text-5xl">
               Spectral Classification{' '}
               <span className="gradient-text">Technology</span>
             </h1>
-            <p className="mt-5 text-base leading-relaxed text-gray-600">
+            <p className="mt-5 text-base leading-relaxed text-navy-300">
               DREAMS Atlas uses dual-modality vibrational spectroscopy — infrared
               absorption and Raman scattering — combined with deep learning to
               classify adhesive materials at the molecular level.
@@ -78,24 +78,24 @@ export default function TechnologyPage() {
       </section>
 
       {/* Modalities */}
-      <section className="py-16">
+      <section className="py-16 bg-navy-950">
         <div className="section-container">
-          <h2 className="text-2xl font-bold tracking-tight">
+          <h2 className="text-2xl font-bold tracking-tight text-white">
             Spectral Modalities
           </h2>
           <div className="mt-8 grid gap-6 md:grid-cols-3">
             {modalities.map((m) => (
               <div
                 key={m.name}
-                className="rounded-xl border border-gray-100 p-6 shadow-sm"
+                className="rounded-panel border border-white/5 bg-surface/60 p-6 backdrop-blur-sm shadow-card transition-all hover:border-teal-400/20"
               >
-                <h3 className="text-lg font-semibold text-primary-700">
+                <h3 className="text-lg font-semibold text-teal-400">
                   {m.name}
                 </h3>
-                <p className="mt-1 font-mono text-xs text-gray-400">
+                <p className="mt-1 font-mono text-xs text-navy-400">
                   {m.range}
                 </p>
-                <p className="mt-3 text-sm leading-relaxed text-gray-600">
+                <p className="mt-3 text-sm leading-relaxed text-navy-300">
                   {m.description}
                 </p>
               </div>
@@ -105,12 +105,12 @@ export default function TechnologyPage() {
       </section>
 
       {/* Adhesive Classes */}
-      <section className="bg-gray-50 py-16">
+      <section className="bg-navy-900/50 py-16">
         <div className="section-container">
-          <h2 className="text-2xl font-bold tracking-tight">
+          <h2 className="text-2xl font-bold tracking-tight text-white">
             7 Adhesive Families
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
+          <p className="mt-2 text-sm text-navy-300">
             955 samples spanning 43 unique compounds across the adhesive
             landscape.
           </p>
@@ -118,12 +118,12 @@ export default function TechnologyPage() {
             {adhesiveClasses.map((ac) => (
               <div
                 key={ac.name}
-                className="flex items-center gap-3 rounded-lg bg-white p-4 shadow-sm"
+                className="flex items-center gap-3 rounded-card bg-surface/40 border border-white/5 p-4"
               >
                 <div className={`h-3 w-3 rounded-full ${ac.color}`} />
                 <div>
-                  <p className="text-sm font-semibold">{ac.name}</p>
-                  <p className="text-xs text-gray-400">{ac.count} samples</p>
+                  <p className="text-sm font-semibold text-white">{ac.name}</p>
+                  <p className="text-xs text-navy-400">{ac.count} samples</p>
                 </div>
               </div>
             ))}
@@ -132,19 +132,19 @@ export default function TechnologyPage() {
       </section>
 
       {/* Pipeline */}
-      <section className="py-16">
+      <section className="py-16 bg-navy-950">
         <div className="section-container">
-          <h2 className="text-2xl font-bold tracking-tight">
+          <h2 className="text-2xl font-bold tracking-tight text-white">
             Classification Pipeline
           </h2>
           <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             {pipeline.map((p) => (
-              <div key={p.step} className="relative rounded-xl border border-gray-100 p-6 shadow-sm">
-                <span className="text-4xl font-extrabold text-primary-100">
+              <div key={p.step} className="relative rounded-panel border border-white/5 bg-surface/60 p-6 shadow-card">
+                <span className="text-4xl font-extrabold text-navy-700">
                   {p.step}
                 </span>
-                <h3 className="mt-2 text-base font-semibold">{p.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-gray-600">
+                <h3 className="mt-2 text-base font-semibold text-white">{p.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-navy-300">
                   {p.description}
                 </p>
               </div>
@@ -154,13 +154,13 @@ export default function TechnologyPage() {
       </section>
 
       {/* Interactive Spectral Explorer */}
-      <section className="bg-gray-50 py-16">
+      <section className="bg-navy-900/50 py-16">
         <div className="section-container">
           <div className="text-center">
-            <h2 className="text-2xl font-bold tracking-tight">
+            <h2 className="text-2xl font-bold tracking-tight text-white">
               Interactive Spectral Explorer
             </h2>
-            <p className="mt-2 text-sm text-gray-600">
+            <p className="mt-2 text-sm text-navy-300">
               Explore representative IR and Raman spectral signatures for each
               adhesive class. Select a class to view characteristic peaks.
             </p>

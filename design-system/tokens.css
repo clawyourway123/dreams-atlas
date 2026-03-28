@@ -1,0 +1,78 @@
+/* ════════════════════════════════════════════════════════
+   DREAMS Atlas — Shared Design Tokens
+   Used by BOTH vanilla (index.html) and Next.js surfaces
+   ════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Color Palette: Navy (backgrounds) ── */
+  --ds-navy-50:  #f0f4f8;
+  --ds-navy-100: #d9e2ec;
+  --ds-navy-200: #bcccdc;
+  --ds-navy-300: #9fb3c8;
+  --ds-navy-400: #829ab1;
+  --ds-navy-500: #627d98;
+  --ds-navy-600: #486581;
+  --ds-navy-700: #334e68;
+  --ds-navy-800: #243b53;
+  --ds-navy-900: #1e293b;
+  --ds-navy-950: #171f2e;
+
+  /* ── Color Palette: Teal (accent) ── */
+  --ds-teal-50:  #f0fdfa;
+  --ds-teal-100: #ccfbf1;
+  --ds-teal-200: #99f6e4;
+  --ds-teal-300: #5eead4;
+  --ds-teal-400: #2dd4bf;
+  --ds-teal-500: #14b8a6;
+  --ds-teal-600: #0d9488;
+  --ds-teal-700: #0f766e;
+  --ds-teal-800: #115e59;
+  --ds-teal-900: #134e4a;
+  --ds-teal-950: #042f2e;
+
+  /* ── Semantic Tokens ── */
+  --ds-bg-body:        var(--ds-navy-950);
+  --ds-bg-surface:     #243b53;
+  --ds-bg-surface-light: #2d4a63;
+  --ds-bg-panel:       rgba(30, 41, 59, 0.85);
+  --ds-bg-glass:       rgba(36, 59, 83, 0.6);
+
+  --ds-border:         rgba(255, 255, 255, 0.08);
+  --ds-border-hover:   rgba(255, 255, 255, 0.2);
+  --ds-border-accent:  rgba(45, 212, 191, 0.3);
+
+  --ds-text-primary:   #ffffff;
+  --ds-text-secondary: #9fb3c8;   /* navy-300, 7.2:1 contrast on navy-950 */
+  --ds-text-dim:       #829ab1;   /* navy-400, 5.1:1 contrast — WCAG AA */
+  --ds-text-muted:     #627d98;   /* navy-500, use only on large text */
+
+  --ds-accent:         var(--ds-teal-400);
+  --ds-accent-hover:   var(--ds-teal-300);
+  --ds-accent-glow:    rgba(45, 212, 191, 0.3);
+  --ds-accent-surface: rgba(45, 212, 191, 0.1);
+
+  /* ── Typography ── */
+  --ds-font-body:  'Inter', system-ui, -apple-system, sans-serif;
+  --ds-font-mono:  'JetBrains Mono', ui-monospace, monospace;
+
+  /* ── Spacing (glass blur) ── */
+  --ds-glass-blur: 32px;
+
+  /* ── Radii ── */
+  --ds-radius-sm:   8px;
+  --ds-radius-md:   12px;
+  --ds-radius-lg:   16px;
+  --ds-radius-pill:  9999px;
+
+  /* ── Shadows ── */
+  --ds-shadow-card:   0 4px 24px rgba(0, 0, 0, 0.2);
+  --ds-shadow-glow:   0 0 20px var(--ds-accent-glow);
+  --ds-shadow-panel:  0 10px 40px rgba(0, 0, 0, 0.5);
+
+  /* ── Focus ring (accessibility) ── */
+  --ds-focus-ring:     2px solid var(--ds-teal-400);
+  --ds-focus-offset:   2px;
+
+  /* ── Transitions ── */
+  --ds-transition:     300ms ease-out;
+}

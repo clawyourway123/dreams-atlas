@@ -44,24 +44,24 @@ export default function Home() {
   return (
     <>
       {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-primary-950 via-primary-900 to-primary-800">
+      <section className="relative overflow-hidden bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800">
         <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
         <div className="section-container relative py-24 sm:py-32 lg:py-40">
           <div className="mx-auto max-w-3xl text-center">
-            <p className="text-sm font-semibold uppercase tracking-widest text-primary-300">
+            <p className="text-sm font-semibold uppercase tracking-widest text-teal-400">
               K-Dense Science Lab
             </p>
             <h1 className="mt-4 text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl">
               DREAMS{' '}
-              <span className="bg-gradient-to-r from-primary-300 to-accent-400 bg-clip-text text-transparent">
+              <span className="gradient-text">
                 Atlas
               </span>
             </h1>
-            <p className="mt-2 text-lg font-medium text-primary-200">
+            <p className="mt-2 text-lg font-medium text-navy-300">
               Dual-modality Recognition &amp; Evaluation of Adhesive Materials
               via Spectroscopy
             </p>
-            <p className="mt-6 text-base leading-relaxed text-primary-100/80">
+            <p className="mt-6 text-base leading-relaxed text-navy-300/80">
               Combining infrared and Raman spectroscopy with deep learning to
               classify adhesive materials at molecular resolution. Identify 7
               adhesive families across 43 unique compounds &mdash; rapidly and
@@ -71,7 +71,7 @@ export default function Home() {
               <Link href="/technology" className="btn-primary">
                 Explore the Science
               </Link>
-              <Link href="/results" className="btn-secondary !border-primary-400/30 !text-primary-100 hover:!bg-primary-800">
+              <Link href="/results" className="btn-secondary">
                 View Results
               </Link>
             </div>
@@ -81,8 +81,8 @@ export default function Home() {
           <div className="mx-auto mt-16 grid max-w-2xl grid-cols-2 gap-6 sm:grid-cols-4">
             {stats.map((stat) => (
               <div key={stat.label} className="text-center">
-                <p className="text-3xl font-bold text-white">{stat.value}</p>
-                <p className="mt-1 text-xs font-medium uppercase tracking-wider text-primary-300">
+                <p className="text-3xl font-bold text-teal-400">{stat.value}</p>
+                <p className="mt-1 text-xs font-medium uppercase tracking-wider text-navy-400">
                   {stat.label}
                 </p>
               </div>
@@ -92,14 +92,14 @@ export default function Home() {
       </section>
 
       {/* Features */}
-      <section className="py-20 sm:py-28">
+      <section className="py-20 sm:py-28 bg-navy-950">
         <div className="section-container">
           <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+            <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
               Spectral Intelligence for{' '}
               <span className="gradient-text">Adhesive Science</span>
             </h2>
-            <p className="mt-4 text-base text-gray-600">
+            <p className="mt-4 text-base text-navy-300">
               DREAMS Atlas brings together advanced spectroscopy and machine
               learning to solve the challenge of rapid adhesive identification.
             </p>
@@ -108,13 +108,13 @@ export default function Home() {
             {features.map((f) => (
               <div
                 key={f.title}
-                className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
+                className="rounded-panel border border-white/5 bg-surface/60 p-6 backdrop-blur-sm shadow-card transition-all hover:shadow-card-hover hover:border-teal-400/20"
               >
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-50 text-primary-600">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-teal-400/10 text-teal-400">
                   {f.icon}
                 </div>
-                <h3 className="mt-4 text-lg font-semibold">{f.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-gray-600">
+                <h3 className="mt-4 text-lg font-semibold text-white">{f.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-navy-300">
                   {f.description}
                 </p>
               </div>
@@ -124,19 +124,25 @@ export default function Home() {
       </section>
 
       {/* CTA */}
-      <section className="bg-primary-50 py-16">
-        <div className="section-container text-center">
-          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
+      <section className="relative py-16 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-teal-400/5 to-transparent" />
+        <div className="section-container relative text-center">
+          <h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
             Interested in DREAMS Atlas?
           </h2>
-          <p className="mx-auto mt-3 max-w-xl text-sm text-gray-600">
+          <p className="mx-auto mt-3 max-w-xl text-sm text-navy-300">
             Whether you&apos;re in quality control, forensic science, or
             materials R&amp;D, we&apos;d love to discuss how spectral adhesive
             classification can support your work.
           </p>
-          <Link href="/contact" className="btn-primary mt-8">
-            Contact Us
-          </Link>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+            <Link href="/contact" className="btn-primary">
+              Contact Us
+            </Link>
+            <a href="../index.html" className="btn-secondary">
+              View Enterprise Gallery
+            </a>
+          </div>
         </div>
       </section>
     </>

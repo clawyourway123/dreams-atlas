@@ -38,18 +38,18 @@ export default function ContactForm() {
 
   if (state === 'success') {
     return (
-      <div className="rounded-2xl border border-gray-100 bg-white p-8 shadow-sm">
+      <div className="rounded-panel border border-white/5 bg-surface/60 p-8 shadow-card">
         <div className="text-center py-8">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-accent-100">
-            <svg className="h-6 w-6 text-accent-600" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-teal-400/10">
+            <svg className="h-6 w-6 text-teal-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
             </svg>
           </div>
-          <h3 className="mt-4 text-lg font-semibold">Message Ready</h3>
-          <p className="mt-2 text-sm text-gray-600">
+          <h3 className="mt-4 text-lg font-semibold text-white">Message Ready</h3>
+          <p className="mt-2 text-sm text-navy-300">
             Your email client should have opened with your message pre-filled.
             If it didn&apos;t, you can reach us directly at{' '}
-            <a href="mailto:contact@kdense.science" className="text-primary-600 underline">
+            <a href="mailto:contact@kdense.science" className="text-teal-400 underline">
               contact@kdense.science
             </a>
           </p>
@@ -60,7 +60,7 @@ export default function ContactForm() {
               setEmail('');
               setMessage('');
             }}
-            className="mt-6 text-sm font-medium text-primary-600 hover:text-primary-700"
+            className="mt-6 text-sm font-medium text-teal-400 hover:text-teal-300"
           >
             Send another message
           </button>
@@ -69,12 +69,15 @@ export default function ContactForm() {
     );
   }
 
+  const inputClasses =
+    'mt-1 block w-full rounded-card border border-white/10 bg-navy-900 px-4 py-2.5 text-sm text-white shadow-sm placeholder:text-navy-500 focus:border-teal-400 focus:outline-none focus:ring-1 focus:ring-teal-400';
+
   return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-8 shadow-sm">
-      <h2 className="text-xl font-bold">Send a Message</h2>
+    <div className="rounded-panel border border-white/5 bg-surface/60 p-8 shadow-card">
+      <h2 className="text-xl font-bold text-white">Send a Message</h2>
       <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
         <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="name" className="block text-sm font-medium text-navy-200">
             Name
           </label>
           <input
@@ -84,12 +87,12 @@ export default function ContactForm() {
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+            className={inputClasses}
             placeholder="Your name"
           />
         </div>
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="email" className="block text-sm font-medium text-navy-200">
             Email
           </label>
           <input
@@ -99,12 +102,12 @@ export default function ContactForm() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+            className={inputClasses}
             placeholder="you@company.com"
           />
         </div>
         <div>
-          <label htmlFor="interest" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="interest" className="block text-sm font-medium text-navy-200">
             Interest
           </label>
           <select
@@ -112,7 +115,7 @@ export default function ContactForm() {
             name="interest"
             value={interest}
             onChange={(e) => setInterest(e.target.value)}
-            className="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+            className={inputClasses}
           >
             <option>Partnership / Collaboration</option>
             <option>Licensing</option>
@@ -122,7 +125,7 @@ export default function ContactForm() {
           </select>
         </div>
         <div>
-          <label htmlFor="message" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="message" className="block text-sm font-medium text-navy-200">
             Message
           </label>
           <textarea
@@ -132,7 +135,7 @@ export default function ContactForm() {
             required
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            className="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+            className={inputClasses}
             placeholder="Tell us about your project..."
           />
         </div>

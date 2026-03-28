@@ -10,7 +10,34 @@
   }
 
   body {
-    @apply bg-white text-gray-900 antialiased;
+    @apply bg-navy-950 text-white antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-sans font-bold tracking-tight;
+  }
+
+  ::selection {
+    @apply bg-teal-400/30 text-white;
+  }
+
+  ::-webkit-scrollbar {
+    @apply w-2;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-navy-950;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-navy-700 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-navy-600;
+  }
+
+  /* Focus visible for keyboard navigation */
+  :focus-visible {
+    @apply outline-2 outline-teal-400 outline-offset-2;
+    outline-style: solid;
   }
 }
 
@@ -20,14 +47,38 @@
   }
 
   .gradient-text {
-    @apply bg-gradient-to-r from-primary-600 to-accent-500 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-teal-400 to-teal-300 bg-clip-text text-transparent;
   }
 
   .btn-primary {
-    @apply inline-flex items-center rounded-lg bg-primary-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-primary-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+    @apply inline-flex items-center rounded-card
+           bg-gradient-to-r from-teal-500 to-teal-400
+           px-6 py-3 text-sm font-semibold text-navy-950
+           shadow-glow transition-all
+           hover:shadow-glow-strong hover:scale-[1.02]
+           focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2 focus-visible:ring-offset-navy-950;
   }
 
   .btn-secondary {
-    @apply inline-flex items-center rounded-lg border border-gray-300 bg-white px-6 py-3 text-sm font-semibold text-gray-700 shadow-sm transition-all hover:bg-gray-50 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+    @apply inline-flex items-center rounded-card
+           border border-white/20 bg-transparent
+           px-6 py-3 text-sm font-semibold text-white
+           shadow-sm transition-all
+           hover:bg-white/5 hover:border-white/30
+           focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2 focus-visible:ring-offset-navy-950;
+  }
+}
+
+@layer utilities {
+  .text-gradient-teal {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-teal-400 to-teal-300;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
 }
