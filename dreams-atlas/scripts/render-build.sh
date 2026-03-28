@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Install dependencies and build Next.js
-npm install
+# Install all dependencies including devDependencies (needed for tailwindcss, postcss, autoprefixer at build time)
+npm install --include=dev
+
+# Build Next.js
 npm run build
 
 # Copy static assets into the standalone output for serving
