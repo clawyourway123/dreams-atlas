@@ -1,3 +1,5 @@
+import ContactForm from '../../components/ContactForm';
+
 export default function ContactPage() {
   return (
     <>
@@ -25,66 +27,7 @@ export default function ContactPage() {
         <div className="section-container">
           <div className="mx-auto grid max-w-5xl gap-12 lg:grid-cols-2">
             {/* Form */}
-            <div className="rounded-2xl border border-gray-100 bg-white p-8 shadow-sm">
-              <h2 className="text-xl font-bold">Send a Message</h2>
-              <form className="mt-6 space-y-5">
-                <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                    Name
-                  </label>
-                  <input
-                    type="text"
-                    id="name"
-                    name="name"
-                    className="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                    placeholder="Your name"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    className="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                    placeholder="you@company.com"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="interest" className="block text-sm font-medium text-gray-700">
-                    Interest
-                  </label>
-                  <select
-                    id="interest"
-                    name="interest"
-                    className="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                  >
-                    <option>Partnership / Collaboration</option>
-                    <option>Licensing</option>
-                    <option>Investment</option>
-                    <option>Technical Inquiry</option>
-                    <option>Other</option>
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor="message" className="block text-sm font-medium text-gray-700">
-                    Message
-                  </label>
-                  <textarea
-                    id="message"
-                    name="message"
-                    rows={4}
-                    className="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                    placeholder="Tell us about your project..."
-                  />
-                </div>
-                <button type="submit" className="btn-primary w-full justify-center">
-                  Send Message
-                </button>
-              </form>
-            </div>
+            <ContactForm />
 
             {/* Info */}
             <div className="space-y-8">

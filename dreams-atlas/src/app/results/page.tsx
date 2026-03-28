@@ -1,3 +1,6 @@
+import ConfusionMatrix from '../../components/ConfusionMatrix';
+import ROCCurves from '../../components/ROCCurves';
+
 const models = [
   {
     name: 'CNN-1D',
@@ -173,24 +176,21 @@ export default function ResultsPage() {
         </div>
       </section>
 
-      {/* Visualization Placeholder */}
+      {/* Performance Visualizations */}
       <section className="py-16">
-        <div className="section-container text-center">
-          <h2 className="text-2xl font-bold tracking-tight">
-            Confusion Matrix &amp; ROC Curves
-          </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Interactive performance visualizations coming soon.
-          </p>
-          <div className="mx-auto mt-8 grid max-w-4xl gap-6 md:grid-cols-2">
-            {['Confusion Matrix', 'ROC Curves'].map((title) => (
-              <div
-                key={title}
-                className="flex h-56 items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50"
-              >
-                <p className="text-sm text-gray-400">{title} placeholder</p>
-              </div>
-            ))}
+        <div className="section-container">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold tracking-tight">
+              Confusion Matrix &amp; ROC Curves
+            </h2>
+            <p className="mt-2 text-sm text-gray-600">
+              Per-class performance breakdown from compound-grouped
+              cross-validation.
+            </p>
+          </div>
+          <div className="mx-auto mt-8 grid max-w-5xl gap-6 md:grid-cols-2">
+            <ConfusionMatrix />
+            <ROCCurves />
           </div>
         </div>
       </section>

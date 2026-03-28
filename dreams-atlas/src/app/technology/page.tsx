@@ -1,3 +1,5 @@
+import SpectralExplorer from '../../components/SpectralExplorer';
+
 const modalities = [
   {
     name: 'Infrared (IR)',
@@ -151,35 +153,20 @@ export default function TechnologyPage() {
         </div>
       </section>
 
-      {/* Spectral Visualization Placeholder */}
+      {/* Interactive Spectral Explorer */}
       <section className="bg-gray-50 py-16">
-        <div className="section-container text-center">
-          <h2 className="text-2xl font-bold tracking-tight">
-            Interactive Spectral Explorer
-          </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Coming soon — explore real IR and Raman spectra for each adhesive
-            class.
-          </p>
-          <div className="mx-auto mt-8 flex h-64 max-w-3xl items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-white">
-            <div className="text-center">
-              <svg
-                className="mx-auto h-12 w-12 text-gray-300"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1}
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5M9 11.25v1.5M12 9v3.75m3-6v6"
-                />
-              </svg>
-              <p className="mt-2 text-sm text-gray-400">
-                Spectral visualization placeholder
-              </p>
-            </div>
+        <div className="section-container">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold tracking-tight">
+              Interactive Spectral Explorer
+            </h2>
+            <p className="mt-2 text-sm text-gray-600">
+              Explore representative IR and Raman spectral signatures for each
+              adhesive class. Select a class to view characteristic peaks.
+            </p>
+          </div>
+          <div className="mx-auto mt-8 max-w-3xl">
+            <SpectralExplorer />
           </div>
         </div>
       </section>
