@@ -208,7 +208,10 @@ async function generateLabData() {
             type: 'scatter3d', name: 'Selected'
         };
 
-        if (typeof Plotly === 'undefined') {
+        // Wait for lazy-loaded Plotly
+        if (typeof loadPlotly === 'function') {
+            await loadPlotly();
+        } else if (typeof Plotly === 'undefined') {
             throw new Error("Plotly not loaded");
         }
 
@@ -490,3 +493,90 @@ function runComparison(id2) {
 function calculateCoverage() { alert("Chemical Space Coverage: 87.4%"); }
 function exportReportPDF() { alert("Report generated (Mock PDF)."); }
 function saveAnnotation() { alert("Annotation saved to workspace!"); }
+
+// Portfolio Gap Analysis — identifies empty regions in chemical space
+let labGapTraceIndex = null;
+
+function toggleGapAnalysis() {
+    if (labGapTraceIndex !== null) {
+        Plotly.deleteTraces('scatter3d', [labGapTraceIndex]);
+        labGapTraceIndex = null;
+        const btn = document.getElementById('gapAnalysisBtn');
+        if (btn) { btn.textContent = 'Gap Analysis'; btn.style.background = ''; }
+        return;
+    }
+
+    if (!labAtlasData.length) return;
+
+    let minX = Infinity, maxX = -Infinity;
+    let minY = Infinity, maxY = -Infinity;
+    let minZ = Infinity, maxZ = -Infinity;
+    for (let i = 0; i < labAtlasData.length; i++) {
+        const d = labAtlasData[i];
+        if (d.x < minX) minX = d.x; if (d.x > maxX) maxX = d.x;
+        if (d.y < minY) minY = d.y; if (d.y > maxY) maxY = d.y;
+        if (d.z < minZ) minZ = d.z; if (d.z > maxZ) maxZ = d.z;
+    }
+
+    const gridRes = 15;
+    const stepX = (maxX - minX) / gridRes;
+    const stepY = (maxY - minY) / gridRes;
+    const stepZ = (maxZ - minZ) / gridRes;
+
+    const grid = new Uint8Array(gridRes * gridRes * gridRes);
+    for (let i = 0; i < labAtlasData.length; i++) {
+        const d = labAtlasData[i];
+        const gx = Math.min(Math.floor((d.x - minX) / stepX), gridRes - 1);
+        const gy = Math.min(Math.floor((d.y - minY) / stepY), gridRes - 1);
+        const gz = Math.min(Math.floor((d.z - minZ) / stepZ), gridRes - 1);
+        grid[gx * gridRes * gridRes + gy * gridRes + gz] = 1;
+    }
+
+    const gapX = [], gapY = [], gapZ = [], gapText = [];
+    for (let ix = 1; ix < gridRes - 1; ix++) {
+        for (let iy = 1; iy < gridRes - 1; iy++) {
+            for (let iz = 1; iz < gridRes - 1; iz++) {
+                if (grid[ix * gridRes * gridRes + iy * gridRes + iz]) continue;
+                let neighbors = 0;
+                for (let dx = -1; dx <= 1; dx++) {
+                    for (let dy = -1; dy <= 1; dy++) {
+                        for (let dz = -1; dz <= 1; dz++) {
+                            if (dx === 0 && dy === 0 && dz === 0) continue;
+                            if (grid[(ix+dx) * gridRes * gridRes + (iy+dy) * gridRes + (iz+dz)]) neighbors++;
+                        }
+                    }
+                }
+                if (neighbors >= 2) {
+                    gapX.push(minX + (ix + 0.5) * stepX);
+                    gapY.push(minY + (iy + 0.5) * stepY);
+                    gapZ.push(minZ + (iz + 0.5) * stepZ);
+                    gapText.push('Gap region (' + neighbors + ' neighbors)');
+                }
+            }
+        }
+    }
+
+    if (!gapX.length) return;
+
+    Plotly.addTraces('scatter3d', [{
+        x: gapX, y: gapY, z: gapZ,
+        mode: 'markers',
+        text: gapText,
+        hoverinfo: 'text',
+        marker: {
+            size: 8,
+            color: 'rgba(255, 165, 0, 0.25)',
+            symbol: 'diamond',
+            line: { width: 1, color: 'rgba(255, 165, 0, 0.5)' }
+        },
+        type: 'scatter3d',
+        name: 'Portfolio Gaps'
+    }]);
+
+    var plotEl = document.getElementById('scatter3d');
+    labGapTraceIndex = plotEl.data.length - 1;
+
+    const btn = document.getElementById('gapAnalysisBtn');
+    if (btn) { btn.textContent = 'Hide Gaps'; btn.style.background = '#ff9800'; }
+}
+window.toggleGapAnalysis = toggleGapAnalysis;

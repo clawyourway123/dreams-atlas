@@ -9,7 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="design-system/tokens.css">
     <link rel="stylesheet" href="brand-themes.css?v=1.0">
-    <script src="https://cdn.plot.ly/plotly-2.35.0.min.js"></script>
+    <script src="plotly-loader.js"></script>
     <style>
         :root {
             --accent: var(--ds-teal-400);
@@ -75,6 +75,34 @@
             pointer-events: none;
             z-index: 0;
             opacity: 0.6;
+        }
+
+        /* Loading skeleton shown while Plotly loads */
+        .hero-skeleton {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .hero-skeleton::before {
+            content: '';
+            width: 200px; height: 200px;
+            border: 2px solid rgba(255,255,255,0.06);
+            border-top-color: var(--ds-teal-400, #2dd4bf);
+            border-radius: 50%;
+            animation: spin-slow 3s linear infinite;
+            opacity: 0.4;
+        }
+
+        .hero-skeleton.hidden {
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            pointer-events: none;
         }
 
         .hero-content {
@@ -378,6 +406,7 @@
 
     <!-- Hero with 3D Background -->
     <div class="hero">
+        <div class="hero-skeleton" id="hero-skeleton"></div>
         <div id="hero-3d"></div>
         <div class="plotly-retry" id="plotly-retry">
             <p style="color: var(--text-dim); font-size: 13px; margin-bottom: 12px;">3D visualization failed to load</p>
@@ -500,74 +529,79 @@
 
     <script src="brand-config.js?v=1.0"></script>
     <script>
-    // 3D Hero Background — auto-rotating point cloud
+    // 3D Hero Background — lazy-loaded, auto-rotating point cloud (disabled on mobile)
     (function() {
-        if (typeof Plotly === 'undefined') {
-            document.getElementById('plotly-retry').style.display = 'block';
-            return;
-        }
+        var isMobile = window.matchMedia('(max-width: 768px)').matches || navigator.maxTouchPoints > 1;
 
-        var n = 1000;
-        var x = [], y = [], z = [], colors = [];
-        for (var i = 0; i < n; i++) {
-            // Spherical distribution with clusters
-            var theta = Math.random() * Math.PI * 2;
-            var phi = Math.acos(2 * Math.random() - 1);
-            var r = 1.5 + Math.random() * 0.8;
-            x.push(r * Math.sin(phi) * Math.cos(theta));
-            y.push(r * Math.sin(phi) * Math.sin(theta));
-            z.push(r * Math.cos(phi));
-            colors.push(Math.floor(Math.random() * 8));
-        }
+        loadPlotly().then(function() {
+            var n = 1000;
+            var x = [], y = [], z = [], colors = [];
+            for (var i = 0; i < n; i++) {
+                var theta = Math.random() * Math.PI * 2;
+                var phi = Math.acos(2 * Math.random() - 1);
+                var r = 1.5 + Math.random() * 0.8;
+                x.push(r * Math.sin(phi) * Math.cos(theta));
+                y.push(r * Math.sin(phi) * Math.sin(theta));
+                z.push(r * Math.cos(phi));
+                colors.push(Math.floor(Math.random() * 8));
+            }
 
-        var trace = {
-            x: x, y: y, z: z,
-            mode: 'markers',
-            type: 'scatter3d',
-            marker: {
-                size: 2,
-                color: colors,
-                colorscale: 'Viridis',
-                opacity: 0.5,
-                line: { width: 0 }
-            },
-            hoverinfo: 'none'
-        };
-
-        var layout = {
-            margin: { l: 0, r: 0, b: 0, t: 0 },
-            paper_bgcolor: 'rgba(0,0,0,0)',
-            plot_bgcolor: 'rgba(0,0,0,0)',
-            scene: {
-                xaxis: { visible: false },
-                yaxis: { visible: false },
-                zaxis: { visible: false },
-                bgcolor: 'rgba(0,0,0,0)',
-                aspectmode: 'cube',
-                camera: { eye: { x: 1.8, y: 1.8, z: 1.2 } }
-            },
-            showlegend: false
-        };
-
-        Plotly.newPlot('hero-3d', [trace], layout, {
-            responsive: true,
-            displayModeBar: false,
-            staticPlot: true
-        });
-
-        // Auto-rotate
-        var angle = 0;
-        function rotate() {
-            angle += 0.003;
-            var eye = {
-                x: 2.2 * Math.cos(angle),
-                y: 2.2 * Math.sin(angle),
-                z: 1.0
+            var trace = {
+                x: x, y: y, z: z,
+                mode: 'markers',
+                type: 'scatter3d',
+                marker: {
+                    size: 2,
+                    color: colors,
+                    colorscale: 'Viridis',
+                    opacity: 0.5,
+                    line: { width: 0 }
+                },
+                hoverinfo: 'none'
             };
-            Plotly.relayout('hero-3d', { 'scene.camera.eye': eye });
-            requestAnimationFrame(rotate);
-        }
-        rotate();
+
+            var layout = {
+                margin: { l: 0, r: 0, b: 0, t: 0 },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                scene: {
+                    xaxis: { visible: false },
+                    yaxis: { visible: false },
+                    zaxis: { visible: false },
+                    bgcolor: 'rgba(0,0,0,0)',
+                    aspectmode: 'cube',
+                    camera: { eye: { x: 1.8, y: 1.8, z: 1.2 } }
+                },
+                showlegend: false
+            };
+
+            Plotly.newPlot('hero-3d', [trace], layout, {
+                responsive: true,
+                displayModeBar: false,
+                staticPlot: true
+            }).then(function() {
+                var skel = document.getElementById('hero-skeleton');
+                if (skel) skel.classList.add('hidden');
+            });
+
+            // Auto-rotate only on desktop — mobile gets a static view to avoid jank
+            if (!isMobile) {
+                var angle = 0;
+                function rotate() {
+                    angle += 0.003;
+                    var eye = {
+                        x: 2.2 * Math.cos(angle),
+                        y: 2.2 * Math.sin(angle),
+                        z: 1.0
+                    };
+                    Plotly.relayout('hero-3d', { 'scene.camera.eye': eye });
+                    requestAnimationFrame(rotate);
+                }
+                rotate();
+            }
+        }).catch(function() {
+            document.getElementById('plotly-retry').style.display = 'block';
+        });
     })();
 
     // Animated Counters with easeOutQuart

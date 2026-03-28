@@ -12,7 +12,7 @@
             document.documentElement.setAttribute('data-theme', saved);
         })();
     </script>
-    <script src="https://cdn.plot.ly/plotly-2.35.0.min.js"></script>
+    <script src="plotly-loader.js"></script>
     <script src="https://unpkg.com/@rdkit/rdkit/dist/RDKit_minimal.js" async="true"></script>
     <link rel="stylesheet" href="atlas.css?v=2.6.5">
     <link rel="stylesheet" href="brand-themes.css?v=1.0">
@@ -102,6 +102,7 @@
     </div>
 
     <div class="btn-group" style="margin-top: 8px;">
+        <button class="btn" id="gapAnalysisBtn" onclick="toggleGapAnalysis()" style="background: #1a1a1a; border-color: #333;">Gap Analysis</button>
         <button class="btn" onclick="calculateCoverage()" style="background: #1a1a1a; border-color: #333;">Coverage Map</button>
         <button class="btn" onclick="exportReportPDF()" style="background: #1a1a1a; border-color: #333;">Generate Report</button>
     </div>
