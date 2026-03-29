@@ -6,6 +6,8 @@ LRU caching, graceful degradation, and GZip.
 v2.2 — 2026-02-12: Added Phase 12 hardening (GZip, Logs API, Resilience).
 """
 
+import hashlib
+import hmac
 import json
 import logging
 import os
@@ -62,13 +64,55 @@ vault_manager = VaultManager(PROJECT_ROOT)
 # ---------------------------------------------------------------------------
 # API Key Auth
 # ---------------------------------------------------------------------------
-# Maps raw key string -> {"tenant_id": str, "label": str}
-# Populated at startup from config/api_keys.json.
+# Maps SHA-256 hex digest -> {"tenant_id": str, "label": str}
+# Populated at startup from config/api_keys.json (keys stored pre-hashed).
 # If the file is absent, auth is disabled (warn-only) so local dev still works.
 api_keys: dict[str, dict] = {}
 
-# Paths that bypass authentication entirely.
-SKIP_AUTH_PATHS: frozenset[str] = frozenset({"/healthz"})
+# Paths that bypass authentication entirely (public endpoints).
+SKIP_AUTH_PATHS: frozenset[str] = frozenset({"/healthz", "/api/status", "/"})
+
+# Prefixes that require a valid API key (mutation / data endpoints).
+REQUIRE_AUTH_PREFIXES: tuple[str, ...] = (
+    "/api/search",
+    "/api/track",
+    "/api/predict",
+    "/api/onboard",
+    "/api/export",
+    "/api/dotmatics",
+    "/api/collaboration",
+)
+
+
+def _hash_key(raw_key: str) -> str:
+    return hashlib.sha256(raw_key.encode()).hexdigest()
+
+
+# ---------------------------------------------------------------------------
+# Auth Failure Rate Limiter (per-IP, sliding window)
+# ---------------------------------------------------------------------------
+class AuthFailureLimiter:
+    def __init__(self, max_failures: int = 5, window_seconds: int = 300):
+        self.max_failures = max_failures
+        self.window = window_seconds
+        self._hits: dict[str, list[float]] = {}
+
+    def record_failure(self, ip: str) -> None:
+        now = time.time()
+        hits = self._hits.get(ip, [])
+        hits.append(now)
+        self._hits[ip] = hits
+
+    def is_blocked(self, ip: str) -> bool:
+        now = time.time()
+        cutoff = now - self.window
+        hits = self._hits.get(ip, [])
+        hits = [t for t in hits if t > cutoff]
+        self._hits[ip] = hits
+        return len(hits) >= self.max_failures
+
+
+auth_failure_limiter = AuthFailureLimiter(max_failures=5, window_seconds=300)
 
 
 def load_api_keys() -> None:
@@ -336,9 +380,16 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="DreaMS Atlas", lifespan=lifespan)
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+_allowed_origins = [
+    o.strip()
+    for o in os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+    if o.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

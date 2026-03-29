@@ -1,0 +1,44 @@
+{
+  "version": "1.0.0",
+  "created_at": "2026-03-29T20:28:36.141454+00:00",
+  "data_source": "adhesive_spectra_ir_raman_intensities.csv",
+  "pipeline": "build_real_embeddings.py",
+  "dataset": {
+    "n_original_spectra": 955,
+    "n_augmented_spectra": 1045,
+    "n_total_spectra": 2000,
+    "adhesive_classes": 7,
+    "spectral_features": 200,
+    "augmentation_strategies": [
+      "noise",
+      "baseline",
+      "scale",
+      "noise_baseline"
+    ],
+    "augmentation_params": {
+      "noise_sigma": 0.02,
+      "baseline_degree": 2,
+      "baseline_amplitude": 0.05,
+      "intensity_scale_range": [
+        0.85,
+        1.15
+      ]
+    }
+  },
+  "embeddings": {
+    "method": "UMAP",
+    "n_components_3d": 3,
+    "umap_params": {
+      "n_neighbors": 30,
+      "min_dist": 0.3,
+      "metric": "cosine"
+    },
+    "faiss_index_type": "IndexFlatL2",
+    "embedding_dim": 200
+  },
+  "checksums": {
+    "atlas_data_sha256": "fad7b5ea64caab8433b145bd5207647ad03c9538fdd3f538d0205533356a82f6",
+    "embeddings_sha256": "940221a025b338eaadc95f1b1b5ca73d603d37ec9628be9664a7b2f93603f700"
+  },
+  "row_count": 2000
+}
