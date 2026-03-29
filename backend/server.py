@@ -19,7 +19,7 @@ import numpy as np
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 
 from backend.vault_manager import VaultManager
 
@@ -730,13 +730,21 @@ def cluster_insights(cluster_id: int):
 
 
 # ---------------------------------------------------------------------------
-# Static Files
+# Static Files & Root Redirect
 # ---------------------------------------------------------------------------
+
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://dreams-atlas.onrender.com")
 
 
 @app.get("/")
-async def serve_index():
-    return FileResponse(str(PROJECT_ROOT / "index.html"))
+async def redirect_root():
+    return RedirectResponse(url=FRONTEND_URL, status_code=301)
+
+
+@app.get("/index.html")
+async def redirect_index_html():
+    return RedirectResponse(url=FRONTEND_URL, status_code=301)
+
 
 _STATIC_DENYLIST: frozenset[str] = frozenset({"config", "vault", "memory"})
 
