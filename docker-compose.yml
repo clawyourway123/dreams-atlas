@@ -7,3 +7,11 @@ services:
       - "8000:8000"
     environment:
       - PORT=8000
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
