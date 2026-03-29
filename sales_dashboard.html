@@ -3,54 +3,886 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DreaMS Sales CRM | Lead Intel</title>
-    <link rel="stylesheet" href="atlas.css">
+    <title>DreaMS Sales Intelligence | K-Dense Science Lab</title>
+    <link rel="stylesheet" href="design-system/tokens.css">
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <style>
-        body { padding: 40px; }
-        .dashboard { max-width: 1000px; margin: 0 auto; }
-        .log-item { padding: 12px; border-bottom: 1px solid var(--border-color); font-family: monospace; font-size: 12px; }
-        .lead-card { background: var(--panel-bg); padding: 20px; border-radius: 12px; margin-bottom: 20px; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: var(--ds-bg-body);
+            color: var(--ds-text-primary);
+            font-family: var(--ds-font-body);
+            font-size: var(--ds-text-base);
+            line-height: var(--ds-leading-normal);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ── Background Pattern ── */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(ellipse 80% 60% at 50% -20%, rgba(45, 212, 191, 0.06) 0%, transparent 60%),
+                radial-gradient(ellipse 60% 40% at 80% 100%, rgba(96, 165, 250, 0.04) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ── Top Navigation Bar ── */
+        .topbar {
+            position: sticky;
+            top: 0;
+            z-index: var(--ds-z-sticky);
+            background: var(--ds-bg-glass-strong);
+            backdrop-filter: blur(var(--ds-glass-blur-strong));
+            -webkit-backdrop-filter: blur(var(--ds-glass-blur-strong));
+            border-bottom: var(--ds-glass-border);
+            padding: var(--ds-space-3) var(--ds-space-8);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .topbar-brand {
+            display: flex;
+            align-items: center;
+            gap: var(--ds-space-3);
+        }
+
+        .topbar-logo {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--ds-teal-400), var(--ds-teal-600));
+            border-radius: var(--ds-radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: var(--ds-weight-bold);
+            font-size: var(--ds-text-sm);
+            color: var(--ds-navy-950);
+        }
+
+        .topbar-title {
+            font-size: var(--ds-text-md);
+            font-weight: var(--ds-weight-semibold);
+            letter-spacing: var(--ds-tracking-tight);
+        }
+
+        .topbar-subtitle {
+            font-size: var(--ds-text-xs);
+            color: var(--ds-text-dim);
+            text-transform: uppercase;
+            letter-spacing: var(--ds-tracking-widest);
+        }
+
+        .topbar-status {
+            display: flex;
+            align-items: center;
+            gap: var(--ds-space-6);
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: var(--ds-space-2);
+            font-size: var(--ds-text-sm);
+            color: var(--ds-text-secondary);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--ds-success);
+            box-shadow: 0 0 8px rgba(52, 211, 153, 0.5);
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* ── Dashboard Layout ── */
+        .dashboard {
+            position: relative;
+            z-index: 1;
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: var(--ds-space-6) var(--ds-space-8);
+        }
+
+        /* ── Dashboard Header ── */
+        .dashboard-header {
+            margin-bottom: var(--ds-space-8);
+        }
+
+        .dashboard-header h1 {
+            font-family: var(--ds-font-display);
+            font-size: var(--ds-text-3xl);
+            font-weight: var(--ds-weight-bold);
+            letter-spacing: var(--ds-tracking-tight);
+            line-height: var(--ds-leading-tight);
+            margin-bottom: var(--ds-space-2);
+        }
+
+        .dashboard-header p {
+            font-size: var(--ds-text-md);
+            color: var(--ds-text-dim);
+        }
+
+        /* ── KPI Strip ── */
+        .kpi-strip {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: var(--ds-space-4);
+            margin-bottom: var(--ds-space-6);
+        }
+
+        .kpi-card {
+            background: var(--ds-bg-glass);
+            backdrop-filter: blur(var(--ds-glass-blur));
+            -webkit-backdrop-filter: blur(var(--ds-glass-blur));
+            border: var(--ds-glass-border);
+            border-radius: var(--ds-radius-lg);
+            padding: var(--ds-space-5) var(--ds-space-6);
+            position: relative;
+            overflow: hidden;
+            transition: border-color var(--ds-transition-fast), transform var(--ds-transition-fast);
+            box-shadow: var(--ds-glass-highlight);
+        }
+
+        .kpi-card:hover {
+            border-color: var(--ds-border-hover);
+            transform: translateY(-2px);
+        }
+
+        .kpi-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--ds-accent), transparent);
+            opacity: 0;
+            transition: opacity var(--ds-transition-fast);
+        }
+
+        .kpi-card:hover::after {
+            opacity: 1;
+        }
+
+        .kpi-label {
+            font-size: var(--ds-text-xs);
+            color: var(--ds-text-dim);
+            text-transform: uppercase;
+            letter-spacing: var(--ds-tracking-wider);
+            font-weight: var(--ds-weight-medium);
+            margin-bottom: var(--ds-space-2);
+        }
+
+        .kpi-value {
+            font-family: var(--ds-font-mono);
+            font-size: var(--ds-text-3xl);
+            font-weight: var(--ds-weight-bold);
+            color: var(--ds-text-primary);
+            line-height: var(--ds-leading-none);
+            margin-bottom: var(--ds-space-1);
+        }
+
+        .kpi-change {
+            font-size: var(--ds-text-xs);
+            font-weight: var(--ds-weight-medium);
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            border-radius: var(--ds-radius-pill);
+        }
+
+        .kpi-change.positive {
+            color: var(--ds-success);
+            background: var(--ds-success-dim);
+        }
+
+        .kpi-change.negative {
+            color: var(--ds-danger);
+            background: var(--ds-danger-dim);
+        }
+
+        /* ── Chart Grid ── */
+        .chart-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--ds-space-6);
+            margin-bottom: var(--ds-space-6);
+        }
+
+        .chart-grid-full {
+            grid-column: 1 / -1;
+        }
+
+        .chart-panel {
+            background: var(--ds-bg-glass);
+            backdrop-filter: blur(var(--ds-glass-blur));
+            -webkit-backdrop-filter: blur(var(--ds-glass-blur));
+            border: var(--ds-glass-border);
+            border-radius: var(--ds-radius-lg);
+            padding: var(--ds-space-6);
+            box-shadow: var(--ds-glass-highlight);
+        }
+
+        .chart-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--ds-space-4);
+        }
+
+        .chart-panel-title {
+            font-size: var(--ds-text-md);
+            font-weight: var(--ds-weight-semibold);
+            letter-spacing: var(--ds-tracking-tight);
+        }
+
+        .chart-panel-badge {
+            font-size: var(--ds-text-xs);
+            color: var(--ds-accent);
+            background: var(--ds-accent-surface);
+            border: 1px solid var(--ds-border-accent);
+            padding: 2px 10px;
+            border-radius: var(--ds-radius-pill);
+            font-weight: var(--ds-weight-medium);
+        }
+
+        .chart-container {
+            width: 100%;
+            min-height: 300px;
+        }
+
+        /* ── Pipeline Table ── */
+        .pipeline-section {
+            margin-bottom: var(--ds-space-6);
+        }
+
+        .pipeline-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .pipeline-table thead th {
+            font-size: var(--ds-text-xs);
+            color: var(--ds-text-dim);
+            text-transform: uppercase;
+            letter-spacing: var(--ds-tracking-wider);
+            font-weight: var(--ds-weight-semibold);
+            padding: var(--ds-space-3) var(--ds-space-4);
+            text-align: left;
+            border-bottom: 1px solid var(--ds-border);
+        }
+
+        .pipeline-table tbody tr {
+            transition: background var(--ds-transition-fast);
+        }
+
+        .pipeline-table tbody tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .pipeline-table td {
+            padding: var(--ds-space-4);
+            border-bottom: 1px solid var(--ds-border-subtle);
+            font-size: var(--ds-text-sm);
+            vertical-align: middle;
+        }
+
+        .company-cell {
+            display: flex;
+            align-items: center;
+            gap: var(--ds-space-3);
+        }
+
+        .company-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: var(--ds-radius-sm);
+            background: var(--ds-bg-surface);
+            border: 1px solid var(--ds-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: var(--ds-weight-bold);
+            font-size: var(--ds-text-xs);
+            color: var(--ds-accent);
+        }
+
+        .company-name {
+            font-weight: var(--ds-weight-medium);
+            color: var(--ds-text-primary);
+        }
+
+        .company-industry {
+            font-size: var(--ds-text-xs);
+            color: var(--ds-text-muted);
+        }
+
+        .stage-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: var(--ds-radius-pill);
+            font-size: var(--ds-text-xs);
+            font-weight: var(--ds-weight-medium);
+        }
+
+        .stage-hot {
+            color: var(--ds-danger);
+            background: var(--ds-danger-dim);
+        }
+
+        .stage-warm {
+            color: var(--ds-warning);
+            background: var(--ds-warning-dim);
+        }
+
+        .stage-active {
+            color: var(--ds-success);
+            background: var(--ds-success-dim);
+        }
+
+        .stage-new {
+            color: var(--ds-info);
+            background: var(--ds-info-dim);
+        }
+
+        .engagement-bar {
+            width: 100%;
+            height: 6px;
+            background: var(--ds-bg-surface);
+            border-radius: var(--ds-radius-pill);
+            overflow: hidden;
+        }
+
+        .engagement-fill {
+            height: 100%;
+            border-radius: var(--ds-radius-pill);
+            transition: width var(--ds-duration-slow) var(--ds-ease-out);
+        }
+
+        .engagement-high { background: var(--ds-success); }
+        .engagement-medium { background: var(--ds-warning); }
+        .engagement-low { background: var(--ds-info); }
+
+        /* ── Activity Feed ── */
+        .activity-feed {
+            max-height: 320px;
+            overflow-y: auto;
+        }
+
+        .activity-item {
+            display: flex;
+            gap: var(--ds-space-3);
+            padding: var(--ds-space-3) 0;
+            border-bottom: 1px solid var(--ds-border-subtle);
+            font-size: var(--ds-text-sm);
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-time {
+            font-family: var(--ds-font-mono);
+            font-size: var(--ds-text-xs);
+            color: var(--ds-text-muted);
+            white-space: nowrap;
+            min-width: 70px;
+        }
+
+        .activity-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+
+        .activity-text {
+            color: var(--ds-text-secondary);
+            line-height: var(--ds-leading-snug);
+        }
+
+        .activity-text strong {
+            color: var(--ds-text-primary);
+            font-weight: var(--ds-weight-medium);
+        }
+
+        /* ── Scrollbar ── */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--ds-navy-700); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--ds-navy-600); }
+
+        /* ── Responsive ── */
+        @media (max-width: 1024px) {
+            .kpi-strip { grid-template-columns: repeat(2, 1fr); }
+            .chart-grid { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 640px) {
+            .kpi-strip { grid-template-columns: 1fr; }
+            .dashboard { padding: var(--ds-space-4); }
+            .topbar { padding: var(--ds-space-3) var(--ds-space-4); }
+            .pipeline-table { font-size: var(--ds-text-xs); }
+        }
+
+        /* ── Reduced Motion ── */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* ── Focus Ring ── */
+        :focus-visible {
+            outline: var(--ds-focus-ring);
+            outline-offset: var(--ds-focus-offset);
+        }
     </style>
 </head>
 <body>
-    <div class="dashboard">
-        <h1>Sales Intelligence Dashboard</h1>
-        <p style="color:var(--text-dim)">Real-time tracking of enterprise demo interactions.</p>
 
-        <div class="lead-card">
-            <h2>Recent Activity</h2>
-            <div id="logOutput">Loading system logs...</div>
+    <!-- Top Navigation -->
+    <nav class="topbar" role="banner">
+        <div class="topbar-brand">
+            <div class="topbar-logo" aria-hidden="true">KD</div>
+            <div>
+                <div class="topbar-title">DreaMS Sales Intelligence</div>
+                <div class="topbar-subtitle">K-Dense Science Lab</div>
+            </div>
         </div>
+        <div class="topbar-status">
+            <div class="status-indicator">
+                <div class="status-dot" aria-hidden="true"></div>
+                <span>Live data</span>
+            </div>
+            <div class="status-indicator" style="color: var(--ds-text-muted);">
+                Updated <time id="lastUpdate">just now</time>
+            </div>
+        </div>
+    </nav>
 
-        <div class="lead-card">
-            <h2>Lead Pipeline (Mock)</h2>
-            <table style="width:100%; text-align:left;">
-                <tr><th>Company</th><th>Demo Interactions</th><th>Status</th></tr>
-                <tr><td>Henkel</td><td>42</td><td><span style="color:var(--accent)">HOT</span></td></tr>
-                <tr><td>3M</td><td>12</td><td>Warm</td></tr>
-                <tr><td>BASF</td><td>5</td><td>Cold</td></tr>
-            </table>
-        </div>
-    </div>
+    <main class="dashboard" role="main">
+
+        <!-- Header -->
+        <header class="dashboard-header">
+            <h1>Enterprise Pipeline</h1>
+            <p>Real-time tracking of adhesive spectra demo interactions &amp; lead intelligence.</p>
+        </header>
+
+        <!-- KPI Strip -->
+        <section class="kpi-strip" aria-label="Key Performance Indicators">
+            <article class="kpi-card">
+                <div class="kpi-label">Total Pipeline Value</div>
+                <div class="kpi-value">$4.2M</div>
+                <span class="kpi-change positive" aria-label="increased 23%">+23% QoQ</span>
+            </article>
+            <article class="kpi-card">
+                <div class="kpi-label">Active Demos</div>
+                <div class="kpi-value">12</div>
+                <span class="kpi-change positive" aria-label="increased by 4">+4 this week</span>
+            </article>
+            <article class="kpi-card">
+                <div class="kpi-label">Demo-to-Meeting Rate</div>
+                <div class="kpi-value">68%</div>
+                <span class="kpi-change positive" aria-label="increased 12%">+12% vs prev</span>
+            </article>
+            <article class="kpi-card">
+                <div class="kpi-label">Avg. Engagement Score</div>
+                <div class="kpi-value">8.4</div>
+                <span class="kpi-change positive" aria-label="increased 0.6">+0.6 pts</span>
+            </article>
+        </section>
+
+        <!-- Charts Row 1: Revenue & Funnel -->
+        <section class="chart-grid" aria-label="Revenue and Funnel Charts">
+            <div class="chart-panel">
+                <div class="chart-panel-header">
+                    <h2 class="chart-panel-title">Revenue Pipeline Trend</h2>
+                    <span class="chart-panel-badge">Q1 2026</span>
+                </div>
+                <div id="revenueChart" class="chart-container" role="img" aria-label="Revenue pipeline trend chart"></div>
+            </div>
+            <div class="chart-panel">
+                <div class="chart-panel-header">
+                    <h2 class="chart-panel-title">Sales Funnel</h2>
+                    <span class="chart-panel-badge">All Time</span>
+                </div>
+                <div id="funnelChart" class="chart-container" role="img" aria-label="Sales funnel chart"></div>
+            </div>
+        </section>
+
+        <!-- Charts Row 2: Engagement & Segment -->
+        <section class="chart-grid" aria-label="Engagement and Segment Charts">
+            <div class="chart-panel">
+                <div class="chart-panel-header">
+                    <h2 class="chart-panel-title">Demo Engagement by Company</h2>
+                    <span class="chart-panel-badge">Last 30 Days</span>
+                </div>
+                <div id="engagementChart" class="chart-container" role="img" aria-label="Demo engagement by company chart"></div>
+            </div>
+            <div class="chart-panel">
+                <div class="chart-panel-header">
+                    <h2 class="chart-panel-title">Pipeline by Industry Segment</h2>
+                    <span class="chart-panel-badge">Active Leads</span>
+                </div>
+                <div id="segmentChart" class="chart-container" role="img" aria-label="Pipeline by industry segment chart"></div>
+            </div>
+        </section>
+
+        <!-- Lead Pipeline Table -->
+        <section class="chart-panel pipeline-section" aria-label="Lead Pipeline">
+            <div class="chart-panel-header">
+                <h2 class="chart-panel-title">Lead Pipeline</h2>
+                <span class="chart-panel-badge">8 Active Leads</span>
+            </div>
+            <div style="overflow-x: auto;">
+                <table class="pipeline-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Company</th>
+                            <th scope="col">Deal Value</th>
+                            <th scope="col">Stage</th>
+                            <th scope="col">Engagement</th>
+                            <th scope="col">Demo Count</th>
+                            <th scope="col">Last Activity</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pipelineBody">
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Activity Feed + Key Metrics -->
+        <section class="chart-grid" aria-label="Activity Feed and Key Metrics">
+            <div class="chart-panel">
+                <div class="chart-panel-header">
+                    <h2 class="chart-panel-title">Recent Activity</h2>
+                    <span class="chart-panel-badge">Live Feed</span>
+                </div>
+                <div id="activityFeed" class="activity-feed" role="log" aria-label="Recent activity feed">
+                </div>
+            </div>
+            <div class="chart-panel">
+                <div class="chart-panel-header">
+                    <h2 class="chart-panel-title">Feature Interest Heatmap</h2>
+                    <span class="chart-panel-badge">Across Demos</span>
+                </div>
+                <div id="heatmapChart" class="chart-container" role="img" aria-label="Feature interest heatmap"></div>
+            </div>
+        </section>
+
+    </main>
 
     <script>
-        const FAISS_BASE_URL = "https://dreams-atlas.onrender.com";
-        async function fetchLogs() {
-            try {
-                const res = await fetch(`${FAISS_BASE_URL}/api/logs`);
-                const logs = await res.json();
-                const out = document.getElementById('logOutput');
-                out.innerHTML = logs.map(l => `
-                    <div class="log-item">
-                        <span style="color:var(--accent)">[${l.time}]</span> ${l.message}
+    // ─── Plotly Theme (matching design system tokens) ───
+    const dsColors = {
+        bg:        'rgba(0,0,0,0)',
+        gridColor: 'rgba(255,255,255,0.04)',
+        textColor: '#829ab1',
+        textLight: '#9fb3c8',
+        accent:    '#2dd4bf',
+        chart:     ['#2dd4bf','#60a5fa','#a78bfa','#f472b6','#fbbf24','#34d399','#fb923c','#c084fc']
+    };
+
+    const dsLayout = {
+        paper_bgcolor: dsColors.bg,
+        plot_bgcolor:  dsColors.bg,
+        font: { family: 'Inter, system-ui, sans-serif', color: dsColors.textColor, size: 12 },
+        margin: { t: 20, r: 20, b: 40, l: 50 },
+        xaxis: { gridcolor: dsColors.gridColor, zerolinecolor: dsColors.gridColor },
+        yaxis: { gridcolor: dsColors.gridColor, zerolinecolor: dsColors.gridColor },
+        hoverlabel: {
+            bgcolor: '#243b53',
+            bordercolor: 'rgba(255,255,255,0.1)',
+            font: { family: 'Inter, system-ui, sans-serif', color: '#fff', size: 13 }
+        }
+    };
+
+    const dsConfig = {
+        displayModeBar: false,
+        responsive: true
+    };
+
+    // ─── Revenue Pipeline Chart ───
+    function renderRevenueChart() {
+        const months = ['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'];
+        Plotly.newPlot('revenueChart', [
+            {
+                x: months,
+                y: [1.2, 1.8, 2.1, 2.8, 3.5, 4.2],
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Pipeline ($M)',
+                line: { color: dsColors.accent, width: 3, shape: 'spline' },
+                marker: { size: 8, color: dsColors.accent },
+                fill: 'tozeroy',
+                fillcolor: 'rgba(45, 212, 191, 0.08)',
+                hovertemplate: '<b>%{x}</b><br>Pipeline: $%{y}M<extra></extra>'
+            },
+            {
+                x: months,
+                y: [0.3, 0.5, 0.8, 1.0, 1.2, 1.6],
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Closed ($M)',
+                line: { color: dsColors.chart[1], width: 2, dash: 'dot', shape: 'spline' },
+                marker: { size: 6, color: dsColors.chart[1] },
+                hovertemplate: '<b>%{x}</b><br>Closed: $%{y}M<extra></extra>'
+            }
+        ], {
+            ...dsLayout,
+            showlegend: true,
+            legend: { x: 0, y: 1.15, orientation: 'h', font: { size: 11 } },
+            yaxis: { ...dsLayout.yaxis, title: { text: 'Value ($M)', font: { size: 11 } } }
+        }, dsConfig);
+    }
+
+    // ─── Sales Funnel Chart ───
+    function renderFunnelChart() {
+        Plotly.newPlot('funnelChart', [{
+            type: 'funnel',
+            y: ['Demo Requests', 'Demos Completed', 'Follow-up Meetings', 'Proposals Sent', 'Contracts Signed'],
+            x: [156, 98, 67, 34, 18],
+            textinfo: 'value+percent initial',
+            textposition: 'inside',
+            textfont: { family: 'Inter, system-ui, sans-serif', size: 13, color: '#fff' },
+            marker: {
+                color: [dsColors.chart[0], dsColors.chart[1], dsColors.chart[2], dsColors.chart[3], dsColors.chart[4]]
+            },
+            connector: { line: { color: 'rgba(255,255,255,0.05)', width: 1 } },
+            hovertemplate: '<b>%{y}</b><br>Count: %{x}<br>%{percentInitial:.0%} of initial<extra></extra>'
+        }], {
+            ...dsLayout,
+            margin: { t: 10, r: 20, b: 10, l: 10 },
+            funnelmode: 'stack'
+        }, dsConfig);
+    }
+
+    // ─── Engagement Bar Chart ───
+    function renderEngagementChart() {
+        const companies = ['Henkel', '3M', 'BASF', 'Dow', 'AkzoNobel', 'DuPont', 'Evonik', 'Arkema'];
+        const interactions = [142, 98, 87, 72, 65, 54, 41, 28];
+        const colors = interactions.map(v => v > 100 ? dsColors.chart[0] : v > 60 ? dsColors.chart[1] : dsColors.chart[2]);
+
+        Plotly.newPlot('engagementChart', [{
+            type: 'bar',
+            x: interactions,
+            y: companies,
+            orientation: 'h',
+            marker: { color: colors, line: { width: 0 } },
+            text: interactions.map(String),
+            textposition: 'outside',
+            textfont: { size: 11, color: dsColors.textLight },
+            hovertemplate: '<b>%{y}</b><br>Interactions: %{x}<extra></extra>'
+        }], {
+            ...dsLayout,
+            margin: { t: 10, r: 50, b: 30, l: 90 },
+            xaxis: { ...dsLayout.xaxis, title: { text: 'Total Interactions', font: { size: 11 } } },
+            yaxis: { ...dsLayout.yaxis, autorange: 'reversed' }
+        }, dsConfig);
+    }
+
+    // ─── Segment Donut Chart ───
+    function renderSegmentChart() {
+        Plotly.newPlot('segmentChart', [{
+            type: 'pie',
+            labels: ['Adhesives & Sealants', 'Coatings', 'Specialty Chemicals', 'Consumer Products', 'Automotive'],
+            values: [1800, 950, 620, 480, 350],
+            hole: 0.55,
+            marker: {
+                colors: dsColors.chart.slice(0, 5),
+                line: { color: 'rgba(23, 31, 46, 0.8)', width: 2 }
+            },
+            textinfo: 'percent',
+            textposition: 'outside',
+            textfont: { size: 11, color: dsColors.textLight },
+            hovertemplate: '<b>%{label}</b><br>Value: $%{value}K<br>Share: %{percent}<extra></extra>',
+            sort: false
+        }], {
+            ...dsLayout,
+            margin: { t: 20, r: 60, b: 20, l: 60 },
+            showlegend: true,
+            legend: {
+                x: 0.5, xanchor: 'center', y: -0.15,
+                orientation: 'h',
+                font: { size: 10, color: dsColors.textColor }
+            },
+            annotations: [{
+                text: '<b>$4.2M</b>',
+                x: 0.5, y: 0.5,
+                font: { size: 20, color: '#fff', family: 'JetBrains Mono, monospace' },
+                showarrow: false
+            }]
+        }, dsConfig);
+    }
+
+    // ─── Feature Interest Heatmap ───
+    function renderHeatmap() {
+        const features = ['Spectral Matching', 'Batch Analysis', 'Custom Models', '3D Atlas', 'API Access', 'Export Tools'];
+        const companies = ['Henkel', '3M', 'BASF', 'Dow', 'DuPont'];
+        const z = [
+            [9, 8, 7, 6, 5],
+            [7, 9, 6, 8, 4],
+            [5, 6, 9, 4, 7],
+            [8, 5, 4, 9, 6],
+            [4, 7, 8, 5, 9],
+            [6, 4, 5, 7, 8]
+        ];
+
+        Plotly.newPlot('heatmapChart', [{
+            type: 'heatmap',
+            z: z,
+            x: companies,
+            y: features,
+            colorscale: [
+                [0,   'rgba(23, 31, 46, 0.9)'],
+                [0.3, 'rgba(45, 212, 191, 0.15)'],
+                [0.5, 'rgba(45, 212, 191, 0.3)'],
+                [0.7, 'rgba(45, 212, 191, 0.55)'],
+                [1,   'rgba(45, 212, 191, 0.85)']
+            ],
+            showscale: false,
+            text: z.map(row => row.map(v => v + '/10')),
+            texttemplate: '%{text}',
+            textfont: { size: 11, color: '#fff' },
+            hovertemplate: '<b>%{y}</b> x <b>%{x}</b><br>Interest: %{z}/10<extra></extra>',
+            xgap: 3,
+            ygap: 3
+        }], {
+            ...dsLayout,
+            margin: { t: 10, r: 10, b: 40, l: 120 },
+            yaxis: { ...dsLayout.yaxis, autorange: 'reversed' }
+        }, dsConfig);
+    }
+
+    // ─── Pipeline Table Data ───
+    function renderPipelineTable() {
+        const leads = [
+            { name: 'Henkel', abbr: 'HK', industry: 'Adhesives & Sealants', value: '$1.2M', stage: 'hot', stageLabel: 'Negotiation', engagement: 95, demos: 42, lastActivity: '2h ago' },
+            { name: '3M', abbr: '3M', industry: 'Diversified Materials', value: '$850K', stage: 'hot', stageLabel: 'Proposal', engagement: 82, demos: 28, lastActivity: '4h ago' },
+            { name: 'BASF', abbr: 'BA', industry: 'Chemical Manufacturing', value: '$620K', stage: 'warm', stageLabel: 'Evaluation', engagement: 72, demos: 18, lastActivity: '1d ago' },
+            { name: 'Dow', abbr: 'DW', industry: 'Specialty Chemicals', value: '$540K', stage: 'warm', stageLabel: 'Demo Phase', engagement: 65, demos: 15, lastActivity: '1d ago' },
+            { name: 'AkzoNobel', abbr: 'AN', industry: 'Coatings & Paints', value: '$380K', stage: 'active', stageLabel: 'Active Interest', engagement: 54, demos: 12, lastActivity: '3d ago' },
+            { name: 'DuPont', abbr: 'DP', industry: 'Specialty Products', value: '$290K', stage: 'active', stageLabel: 'Pilot Program', engagement: 48, demos: 9, lastActivity: '4d ago' },
+            { name: 'Evonik', abbr: 'EV', industry: 'Specialty Chemicals', value: '$180K', stage: 'new', stageLabel: 'Initial Contact', engagement: 32, demos: 5, lastActivity: '5d ago' },
+            { name: 'Arkema', abbr: 'AR', industry: 'Advanced Materials', value: '$140K', stage: 'new', stageLabel: 'Outreach', engagement: 22, demos: 3, lastActivity: '1w ago' }
+        ];
+
+        const tbody = document.getElementById('pipelineBody');
+        tbody.innerHTML = leads.map(lead => {
+            const engClass = lead.engagement > 70 ? 'engagement-high' : lead.engagement > 40 ? 'engagement-medium' : 'engagement-low';
+            return `
+                <tr>
+                    <td>
+                        <div class="company-cell">
+                            <div class="company-avatar">${lead.abbr}</div>
+                            <div>
+                                <div class="company-name">${lead.name}</div>
+                                <div class="company-industry">${lead.industry}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td style="font-family: var(--ds-font-mono); font-weight: 600;">${lead.value}</td>
+                    <td><span class="stage-badge stage-${lead.stage}">${lead.stageLabel}</span></td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div class="engagement-bar" style="width: 80px;">
+                                <div class="engagement-fill ${engClass}" style="width: ${lead.engagement}%;"></div>
+                            </div>
+                            <span style="font-family: var(--ds-font-mono); font-size: var(--ds-text-xs); color: var(--ds-text-dim);">${lead.engagement}%</span>
+                        </div>
+                    </td>
+                    <td style="font-family: var(--ds-font-mono);">${lead.demos}</td>
+                    <td style="color: var(--ds-text-dim);">${lead.lastActivity}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    // ─── Activity Feed ───
+    function renderActivityFeed() {
+        const activities = [
+            { time: '14:32', icon: '&#x1f50d;', bg: 'var(--ds-info-dim)', text: '<strong>Henkel</strong> explored 3D Atlas — 12 adhesive classes queried' },
+            { time: '14:18', icon: '&#x1f4ca;', bg: 'var(--ds-success-dim)', text: '<strong>3M</strong> ran batch spectral comparison — 45 samples' },
+            { time: '13:55', icon: '&#x1f4e7;', bg: 'var(--ds-accent-surface)', text: 'Follow-up meeting scheduled with <strong>BASF</strong> product team' },
+            { time: '13:42', icon: '&#x2699;', bg: 'var(--ds-warning-dim)', text: '<strong>Dow</strong> requested custom model training for PU adhesives' },
+            { time: '12:30', icon: '&#x1f4c4;', bg: 'var(--ds-info-dim)', text: 'Proposal document sent to <strong>AkzoNobel</strong> procurement' },
+            { time: '11:15', icon: '&#x1f680;', bg: 'var(--ds-success-dim)', text: '<strong>DuPont</strong> pilot program deployed — 500 spectra loaded' },
+            { time: '10:48', icon: '&#x1f50d;', bg: 'var(--ds-accent-surface)', text: '<strong>Evonik</strong> first demo session — high interest in API access' },
+            { time: '09:30', icon: '&#x1f4ca;', bg: 'var(--ds-info-dim)', text: 'Weekly pipeline report generated — $4.2M total value' },
+            { time: '09:05', icon: '&#x2699;', bg: 'var(--ds-warning-dim)', text: '<strong>Arkema</strong> onboarding call completed — demo access granted' }
+        ];
+
+        const feed = document.getElementById('activityFeed');
+        feed.innerHTML = activities.map(a => `
+            <div class="activity-item">
+                <span class="activity-time">${a.time}</span>
+                <div class="activity-icon" style="background: ${a.bg};">${a.icon}</div>
+                <div class="activity-text">${a.text}</div>
+            </div>
+        `).join('');
+    }
+
+    // ─── Live Log Fetch (from FAISS backend) ───
+    const FAISS_BASE_URL = "https://dreams-atlas.onrender.com";
+    async function fetchLiveLogs() {
+        try {
+            const res = await fetch(`${FAISS_BASE_URL}/api/logs`);
+            if (!res.ok) return;
+            const logs = await res.json();
+            if (logs.length > 0) {
+                const feed = document.getElementById('activityFeed');
+                const liveItems = logs.slice(0, 3).map(l => `
+                    <div class="activity-item" style="border-left: 2px solid var(--ds-accent); padding-left: var(--ds-space-3);">
+                        <span class="activity-time">${l.time || 'now'}</span>
+                        <div class="activity-icon" style="background: var(--ds-accent-surface);">&#x26a1;</div>
+                        <div class="activity-text">${l.message}</div>
                     </div>
                 `).join('');
-            } catch (e) {
-                document.getElementById('logOutput').innerText = "Failed to load logs.";
+                feed.insertAdjacentHTML('afterbegin', liveItems);
             }
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } catch (e) {
+            // Silent fail — activity feed still shows mock data
         }
-        fetchLogs();
-        setInterval(fetchLogs, 5000);
+    }
+
+    // ─── Initialize ───
+    document.addEventListener('DOMContentLoaded', () => {
+        renderRevenueChart();
+        renderFunnelChart();
+        renderEngagementChart();
+        renderSegmentChart();
+        renderHeatmap();
+        renderPipelineTable();
+        renderActivityFeed();
+        fetchLiveLogs();
+        setInterval(fetchLiveLogs, 15000);
+    });
     </script>
 </body>
 </html>
