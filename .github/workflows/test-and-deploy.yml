@@ -35,7 +35,7 @@ jobs:
 
       - name: Run backend tests
         run: |
-          pytest backend/tests/ -v --cov=backend --cov-report=xml
+          pytest backend/tests/ -v --cov=backend --cov-report=xml --cov-fail-under=80
       
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
@@ -58,7 +58,7 @@ jobs:
 
       - name: Validate HTML
         run: |
-          npx html-validate index.html henkel_demo.html
+          npx html-validate index.html examples/branded-demos/henkel_demo.html
   
   security-scan:
     name: Security Scan
@@ -133,7 +133,7 @@ jobs:
         with:
           urls: |
             https://dreams-atlas.onrender.com/
-            https://dreams-atlas.onrender.com/henkel_lab_demo.html
+            https://dreams-atlas.onrender.com/examples/branded-demos/henkel_lab_demo.html
           uploadArtifacts: false
           temporaryPublicStorage: true
           budgetPath: .github/lighthouse-budgets.json
