@@ -1,6 +1,21 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { apiFetch } from '@/lib/api';
+
+interface AtlasPoint {
+  id: string;
+  x: number;
+  y: number;
+  z: number;
+  cluster: number;
+  properties: { tack: number; shear: number; viscosity: number };
+}
+
+interface ClusterInfo {
+  cluster_id: number;
+  size: number;
+}
 
 interface DataPoint {
   x: number;
@@ -11,27 +26,19 @@ interface DataPoint {
   color: string;
 }
 
-const FAMILY_COLORS: Record<string, string> = {
-  'Acrylic/PSA': '#3b82f6',
-  Cyanoacrylate: '#8b5cf6',
-  Epoxy: '#f59e0b',
-  'Hot-melt': '#ef4444',
-  Polyurethane: '#22c55e',
-  'Rubber-based': '#f97316',
-  Silicone: '#14b8a6',
-};
+const CLUSTER_COLORS: string[] = [
+  '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444',
+  '#22c55e', '#f97316', '#14b8a6', '#ec4899',
+  '#a855f7', '#06b6d4',
+];
 
-// Simulated PCA-projected spectral data points for 3D visualization
-function generateClusterData(): DataPoint[] {
+// Fallback: procedurally generated data when API is unavailable
+function generateFallbackData(): DataPoint[] {
   const rng = (seed: number) => {
     let s = seed;
-    return () => {
-      s = (s * 16807 + 0) % 2147483647;
-      return s / 2147483647;
-    };
+    return () => { s = (s * 16807 + 0) % 2147483647; return s / 2147483647; };
   };
   const rand = rng(42);
-
   const clusters: { family: string; cx: number; cy: number; cz: number; compounds: string[]; spread: number }[] = [
     { family: 'Acrylic/PSA', cx: -2.5, cy: 1.8, cz: 0.5, compounds: ['Loctite 3090 PSA', '3M VHB 4910', 'tesa ACXplus', 'Avery S8000'], spread: 1.2 },
     { family: 'Cyanoacrylate', cx: 3.0, cy: 2.5, cz: -1.0, compounds: ['Loctite 401', 'Permabond 910', 'Infinity CA+'], spread: 0.9 },
@@ -41,19 +48,17 @@ function generateClusterData(): DataPoint[] {
     { family: 'Rubber-based', cx: 1.5, cy: 0.5, cz: 2.5, compounds: ['3M 77 Spray', 'Bostik Grip N Grab', 'DAP Weldwood'], spread: 1.0 },
     { family: 'Silicone', cx: 0, cy: 3.0, cz: 0, compounds: ['Dow Corning 732', 'GE Silicone II', 'Permatex Ultra'], spread: 0.8 },
   ];
-
   const points: DataPoint[] = [];
   for (const cl of clusters) {
     const n = 12 + Math.floor(rand() * 8);
     for (let i = 0; i < n; i++) {
-      const compound = cl.compounds[Math.floor(rand() * cl.compounds.length)];
       points.push({
         x: cl.cx + (rand() - 0.5) * cl.spread * 2,
         y: cl.cy + (rand() - 0.5) * cl.spread * 2,
         z: cl.cz + (rand() - 0.5) * cl.spread * 2,
         family: cl.family,
-        compound,
-        color: FAMILY_COLORS[cl.family],
+        compound: cl.compounds[Math.floor(rand() * cl.compounds.length)],
+        color: CLUSTER_COLORS[clusters.indexOf(cl) % CLUSTER_COLORS.length],
       });
     }
   }
@@ -65,26 +70,20 @@ function project(
   rotX: number, rotY: number,
   scale: number, cx: number, cy: number,
 ): { px: number; py: number; depth: number } {
-  // Rotate around Y axis
-  const cosY = Math.cos(rotY);
-  const sinY = Math.sin(rotY);
-  let x1 = x * cosY + z * sinY;
+  const cosY = Math.cos(rotY), sinY = Math.sin(rotY);
+  const x1 = x * cosY + z * sinY;
   const z1 = -x * sinY + z * cosY;
-  // Rotate around X axis
-  const cosX = Math.cos(rotX);
-  const sinX = Math.sin(rotX);
+  const cosX = Math.cos(rotX), sinX = Math.sin(rotX);
   const y1 = y * cosX - z1 * sinX;
   const z2 = y * sinX + z1 * cosX;
-
-  return {
-    px: cx + x1 * scale,
-    py: cy - y1 * scale,
-    depth: z2,
-  };
+  return { px: cx + x1 * scale, py: cy - y1 * scale, depth: z2 };
 }
 
 export default function MolecularViewer3D() {
-  const data = useRef(generateClusterData()).current;
+  const [data, setData] = useState<DataPoint[]>(() => generateFallbackData());
+  const [clusterNames, setClusterNames] = useState<Map<number, string>>(new Map());
+  const [loading, setLoading] = useState(true);
+  const [usingFallback, setUsingFallback] = useState(false);
   const [rotX, setRotX] = useState(-0.4);
   const [rotY, setRotY] = useState(0.6);
   const [dragging, setDragging] = useState(false);
@@ -99,12 +98,71 @@ export default function MolecularViewer3D() {
   const cx = width / 2;
   const cy = height / 2;
 
+  // Fetch real atlas data + cluster list
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadAtlasData() {
+      try {
+        const [atlasRes, clusterRes] = await Promise.all([
+          fetch('/atlas_data.json').then((r) => {
+            if (!r.ok) throw new Error('Atlas data not found');
+            return r.json() as Promise<AtlasPoint[]>;
+          }),
+          apiFetch<{ clusters: ClusterInfo[] }>('/api/cluster/list').catch(() => null),
+        ]);
+
+        if (cancelled) return;
+
+        // Build cluster name map from cluster list
+        const nameMap = new Map<number, string>();
+        if (clusterRes) {
+          clusterRes.clusters.forEach((c) => nameMap.set(c.cluster_id, `Cluster ${c.cluster_id}`));
+        }
+        setClusterNames(nameMap);
+
+        // Subsample for performance (max 500 points for SVG rendering)
+        const sampled = atlasRes.length > 500
+          ? atlasRes.filter((_, i) => i % Math.ceil(atlasRes.length / 500) === 0)
+          : atlasRes;
+
+        // Normalize coordinates to fit in view
+        const xs = sampled.map((p) => p.x);
+        const ys = sampled.map((p) => p.y);
+        const zs = sampled.map((p) => p.z);
+        const maxRange = Math.max(
+          Math.max(...xs) - Math.min(...xs),
+          Math.max(...ys) - Math.min(...ys),
+          Math.max(...zs) - Math.min(...zs),
+        ) || 1;
+        const normFactor = 6 / maxRange;
+
+        const points: DataPoint[] = sampled.map((p) => ({
+          x: p.x * normFactor,
+          y: p.y * normFactor,
+          z: p.z * normFactor,
+          family: nameMap.get(p.cluster) ?? `Cluster ${p.cluster}`,
+          compound: p.id.split('_')[0],
+          color: CLUSTER_COLORS[p.cluster % CLUSTER_COLORS.length],
+        }));
+
+        setData(points);
+        setUsingFallback(false);
+      } catch {
+        if (!cancelled) setUsingFallback(true);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    loadAtlasData();
+    return () => { cancelled = true; };
+  }, []);
+
   // Auto-rotate when not interacting
   useEffect(() => {
     if (dragging) return;
-    const id = setInterval(() => {
-      setRotY((r) => r + 0.003);
-    }, 30);
+    const id = setInterval(() => setRotY((r) => r + 0.003), 30);
     return () => clearInterval(id);
   }, [dragging]);
 
@@ -128,16 +186,13 @@ export default function MolecularViewer3D() {
 
   const handlePointerUp = useCallback(() => setDragging(false), []);
 
-  // Project all points
   const projected = data.map((d, i) => {
     const p = project(d.x, d.y, d.z, rotX, rotY, scale, cx, cy);
     return { ...d, ...p, idx: i };
   });
 
-  // Sort by depth for painter's algorithm
   const sorted = [...projected].sort((a, b) => a.depth - b.depth);
 
-  // Project axis endpoints
   const axisLen = 4;
   const axes = [
     { label: 'PC1', end: project(axisLen, 0, 0, rotX, rotY, scale, cx, cy), color: '#4ade80' },
@@ -146,30 +201,46 @@ export default function MolecularViewer3D() {
   ];
   const origin = project(0, 0, 0, rotX, rotY, scale, cx, cy);
 
-  const families = Object.keys(FAMILY_COLORS);
+  const families = Array.from(new Set(data.map((d) => d.family)));
 
   return (
     <div>
       {/* Legend */}
       <div className="mb-4 flex flex-wrap justify-center gap-2">
-        {families.map((f) => (
-          <button
-            key={f}
-            onClick={() => setActiveFamily(activeFamily === f ? null : f)}
-            className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
-              activeFamily === null || activeFamily === f
-                ? 'border-white/10 text-white'
-                : 'border-white/5 text-navy-500'
-            }`}
-          >
-            <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: FAMILY_COLORS[f] }} />
-            {f}
-          </button>
-        ))}
+        {families.map((f) => {
+          const color = data.find((d) => d.family === f)?.color ?? '#6b7280';
+          return (
+            <button
+              key={f}
+              onClick={() => setActiveFamily(activeFamily === f ? null : f)}
+              className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
+                activeFamily === null || activeFamily === f
+                  ? 'border-white/10 text-white'
+                  : 'border-white/5 text-navy-500'
+              }`}
+            >
+              <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
+              {f}
+            </button>
+          );
+        })}
+        {usingFallback && (
+          <span className="flex items-center rounded-full bg-amber-500/10 px-2.5 py-1 text-[10px] text-amber-400">
+            demo data
+          </span>
+        )}
       </div>
 
       {/* 3D Viewer */}
       <div className="relative mx-auto overflow-hidden rounded-panel border border-white/5 bg-navy-950/80 shadow-card">
+        {loading && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-navy-950/60 backdrop-blur-sm">
+            <div className="flex flex-col items-center gap-3">
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-teal-400/30 border-t-teal-400" />
+              <span className="text-xs text-navy-400">Loading atlas data...</span>
+            </div>
+          </div>
+        )}
         <svg
           ref={svgRef}
           viewBox={`0 0 ${width} ${height}`}
@@ -180,7 +251,6 @@ export default function MolecularViewer3D() {
           onPointerLeave={handlePointerUp}
           aria-label="3D PCA projection of spectral data clusters"
         >
-          {/* Background gradient */}
           <defs>
             <radialGradient id="bgGrad" cx="50%" cy="50%">
               <stop offset="0%" stopColor="#1a2d43" />
@@ -229,12 +299,8 @@ export default function MolecularViewer3D() {
 
             return (
               <g key={p.idx}>
-                {/* Glow */}
                 {isHovered && (
-                  <circle
-                    cx={p.px} cy={p.py} r={14}
-                    fill={p.color} opacity={0.15}
-                  />
+                  <circle cx={p.px} cy={p.py} r={14} fill={p.color} opacity={0.15} />
                 )}
                 <circle
                   cx={p.px} cy={p.py} r={r}
@@ -287,7 +353,7 @@ export default function MolecularViewer3D() {
           <span className="font-semibold text-white">{data.length}</span> spectral embeddings
         </span>
         <span>
-          <span className="font-semibold text-white">3</span> principal components
+          <span className="font-semibold text-white">{families.length}</span> clusters
         </span>
         <span className="font-mono">PCA projection</span>
       </div>

@@ -1,6 +1,21 @@
-import MolecularViewer3D from '../../components/MolecularViewer3D';
+import dynamic from 'next/dynamic';
 import SpectralSearch from '../../components/SpectralSearch';
 import ClusteringViz from '../../components/ClusteringViz';
+
+const MolecularViewer3D = dynamic(
+  () => import('../../components/MolecularViewer3D'),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-[480px] items-center justify-center rounded-panel border border-white/5 bg-navy-950/80">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-teal-400/30 border-t-teal-400" />
+          <span className="text-xs text-navy-400">Loading 3D viewer...</span>
+        </div>
+      </div>
+    ),
+  },
+);
 
 export const metadata = {
   title: 'Explore | DREAMS Atlas',
