@@ -305,7 +305,7 @@ async function updateLabDetails(spectrumId) {
     // Reset sub-panels
     ['safety-panel', 'hts-panel', 'sustainability-panel', 'ip-panel'].forEach(id => {
         const p = document.getElementById(id);
-        if (p) p.innerHTML = '<div style="font-size:10px; color:#555;">Loading...</div>';
+        if (p) p.innerHTML = '<div class="detail-sublabel">Loading...</div>';
     });
 
     // Fetch SMILES and draw
@@ -332,11 +332,11 @@ async function fetchSafetyScore(id) {
         const res = await fetch(`${FAISS_BASE_URL}/api/safety/score?id=${encodeURIComponent(id)}`);
         const data = await res.json();
         p.innerHTML = `
-            <label style="font-size:11px; color:var(--text-dim); display:block; margin-bottom:4px;">SAFETY INTELLIGENCE</label>
-            <div style="font-size:14px; font-weight:bold; color:var(--accent);">${(data.tox21_safety_score * 100).toFixed(0)}% Tox21 Safety</div>
-            <div style="font-size:10px; color:var(--text-dim); margin-top:2px;">ClinTox: ${data.clintox_status} | MPO: ${data.mpo_score}</div>
+            <label class="detail-section-label">Safety Intelligence</label>
+            <div class="detail-metric">${(data.tox21_safety_score * 100).toFixed(0)}% Tox21 Safety</div>
+            <div class="detail-sublabel">ClinTox: ${data.clintox_status} | MPO: ${data.mpo_score}</div>
         `;
-    } catch (e) { p.innerHTML = '<div style="font-size:10px; color:#ff4b5c;">Safety data unavailable</div>'; }
+    } catch (e) { p.innerHTML = '<div class="detail-sublabel" style="color:#ff4b5c;">Safety data unavailable</div>'; }
 }
 
 async function fetchHTSData(id) {
@@ -346,11 +346,11 @@ async function fetchHTSData(id) {
         const res = await fetch(`${FAISS_BASE_URL}/api/hts/assay?id=${encodeURIComponent(id)}`);
         const data = await res.json();
         p.innerHTML = `
-            <label style="font-size:11px; color:var(--text-dim); display:block; margin-bottom:4px;">HTS ASSAY DATA</label>
+            <label class="detail-section-label">HTS Assay Data</label>
             <div style="font-size:12px; font-weight:bold; color:var(--header-text);">${data.assay_type}</div>
-            <div style="font-size:11px; color:var(--accent);">IC50: ${data.ic50_um} ${data.unit}</div>
+            <div class="detail-metric">IC50: ${data.ic50_um} ${data.unit}</div>
         `;
-    } catch (e) { p.innerHTML = '<div style="font-size:10px; color:#ff4b5c;">Assay data unavailable</div>'; }
+    } catch (e) { p.innerHTML = '<div class="detail-sublabel" style="color:#ff4b5c;">Assay data unavailable</div>'; }
 }
 
 async function fetchSustainabilityScore(id) {
@@ -360,11 +360,11 @@ async function fetchSustainabilityScore(id) {
         const res = await fetch(`${FAISS_BASE_URL}/api/sustainability/score?id=${encodeURIComponent(id)}`);
         const data = await res.json();
         p.innerHTML = `
-            <label style="font-size:11px; color:var(--text-dim); display:block; margin-bottom:4px;">SUSTAINABILITY</label>
-            <div style="font-size:12px; font-weight:bold; color:#00ff88;">${data.green_score}% Green Chemistry</div>
-            <div style="font-size:10px; color:var(--text-dim);">E-Factor: ${data.metrics.e_factor}</div>
+            <label class="detail-section-label">Sustainability</label>
+            <div class="detail-metric success">${data.green_score}% Green Chemistry</div>
+            <div class="detail-sublabel">E-Factor: ${data.metrics.e_factor}</div>
         `;
-    } catch (e) { p.innerHTML = '<div style="font-size:10px; color:#ff4b5c;">Sustainability data unavailable</div>'; }
+    } catch (e) { p.innerHTML = '<div class="detail-sublabel" style="color:#ff4b5c;">Sustainability data unavailable</div>'; }
 }
 
 async function fetchIPData(id) {
@@ -374,11 +374,11 @@ async function fetchIPData(id) {
         const res = await fetch(`${FAISS_BASE_URL}/api/ip/check?id=${encodeURIComponent(id)}`);
         const data = await res.json();
         p.innerHTML = `
-            <label style="font-size:11px; color:var(--text-dim); display:block; margin-bottom:4px;">IP MANAGEMENT</label>
-            <div style="font-size:12px; font-weight:bold; color:#00ff88;">FTO: ${data.fto_status}</div>
-            <div style="font-size:10px; color:var(--text-dim);">Rec: ${data.ip_protection_recommendation}</div>
+            <label class="detail-section-label">IP Management</label>
+            <div class="detail-metric success">FTO: ${data.fto_status}</div>
+            <div class="detail-sublabel">Rec: ${data.ip_protection_recommendation}</div>
         `;
-    } catch (e) { p.innerHTML = '<div style="font-size:10px; color:#ff4b5c;">IP data unavailable</div>'; }
+    } catch (e) { p.innerHTML = '<div class="detail-sublabel" style="color:#ff4b5c;">IP data unavailable</div>'; }
 }
 
 async function labHighlightSimilarFAISS(id) {

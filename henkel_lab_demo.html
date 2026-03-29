@@ -17,30 +17,265 @@
     <link rel="stylesheet" href="atlas.css?v=2.6.5">
     <link rel="stylesheet" href="brand-themes.css?v=1.0">
     <style>
-      .sidebar.collapsed {
-        transform: translateX(-320px);
-      }
-      .sidebar.collapsed ~ .main-view {
-        margin-left: 0 !important;
-      }
-      .details-overlay {
-        position: fixed;
-        top: 80px;
-        right: 20px;
-        max-width: 260px;
-        z-index: 10;
-      }
-      #sidebar-toggle.mobile-toggle {
-        display: block !important;
-      }
+      /* ── Lab Demo Overrides ── */
+      .sidebar.collapsed { transform: translateX(-320px); }
+      .sidebar.collapsed ~ .main-view { margin-left: 0 !important; }
+      #sidebar-toggle.mobile-toggle { display: block !important; }
+
       .btn-group {
         display: flex;
         gap: 8px;
-        margin-top: 20px;
+        margin-top: 16px;
       }
       .btn-group .btn {
         margin-top: 0;
         flex: 1;
+        padding: 10px 8px;
+        font-size: 11px;
+      }
+
+      /* ── Lab Section Dividers ── */
+      .lab-section {
+        margin-top: 24px;
+        padding-top: 20px;
+        border-top: 1px solid var(--border-color);
+      }
+
+      /* ── Instrument Status Grid ── */
+      .instrument-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 8px;
+      }
+      .instrument-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: var(--ds-radius-sm);
+        padding: 10px;
+        transition: border-color 0.2s;
+      }
+      .instrument-card:hover {
+        border-color: var(--ds-border-hover);
+      }
+      .instrument-card .inst-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 6px;
+      }
+      .instrument-card .inst-name {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--header-text);
+        letter-spacing: 0.3px;
+      }
+      .instrument-card .inst-detail {
+        font-size: 10px;
+        color: var(--text-dim);
+        line-height: 1.4;
+      }
+
+      /* ── Status Indicators ── */
+      .status-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        display: inline-block;
+        flex-shrink: 0;
+      }
+      .status-dot.online {
+        background: #34d399;
+        box-shadow: 0 0 6px rgba(52, 211, 153, 0.5);
+      }
+      .status-dot.idle {
+        background: #fbbf24;
+        box-shadow: 0 0 6px rgba(251, 191, 36, 0.4);
+      }
+      .status-dot.offline {
+        background: var(--ds-navy-600);
+      }
+
+      /* ── Data Pipeline Visualization ── */
+      .pipeline-flow {
+        display: flex;
+        align-items: center;
+        gap: 0;
+        margin-top: 10px;
+        overflow-x: auto;
+        padding-bottom: 4px;
+      }
+      .pipeline-node {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        min-width: 56px;
+        flex-shrink: 0;
+      }
+      .pipeline-node .node-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: var(--ds-radius-sm);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        border: 1px solid var(--border-color);
+        background: var(--card-bg);
+        transition: border-color 0.2s, box-shadow 0.2s;
+      }
+      .pipeline-node .node-icon.active {
+        border-color: var(--accent);
+        box-shadow: 0 0 10px var(--accent-glow);
+      }
+      .pipeline-node .node-label {
+        font-size: 9px;
+        color: var(--text-dim);
+        text-align: center;
+        line-height: 1.2;
+        max-width: 52px;
+      }
+      .pipeline-arrow {
+        color: var(--ds-navy-600);
+        font-size: 10px;
+        flex-shrink: 0;
+        margin: 0 2px;
+        margin-bottom: 16px;
+      }
+      .pipeline-arrow.active {
+        color: var(--accent);
+      }
+
+      /* ── Sample Tracking Table ── */
+      .sample-table {
+        width: 100%;
+        margin-top: 8px;
+        border-collapse: collapse;
+      }
+      .sample-table th {
+        font-size: 9px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: var(--text-dim);
+        text-align: left;
+        padding: 4px 6px;
+        border-bottom: 1px solid var(--border-color);
+        font-weight: 600;
+      }
+      .sample-table td {
+        font-size: 10px;
+        color: var(--header-text);
+        padding: 5px 6px;
+        border-bottom: 1px solid rgba(255,255,255,0.03);
+      }
+      .sample-table tr:hover td {
+        background: rgba(255,255,255,0.02);
+      }
+      .sample-badge {
+        display: inline-block;
+        padding: 1px 6px;
+        border-radius: var(--ds-radius-pill);
+        font-size: 9px;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+      }
+      .sample-badge.queued {
+        background: rgba(251, 191, 36, 0.15);
+        color: #fbbf24;
+      }
+      .sample-badge.running {
+        background: rgba(45, 212, 191, 0.15);
+        color: var(--ds-teal-400);
+      }
+      .sample-badge.complete {
+        background: rgba(52, 211, 153, 0.15);
+        color: #34d399;
+      }
+
+      /* ── Details Overlay Enhancement ── */
+      .details-overlay {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        max-width: 280px;
+        z-index: 10;
+      }
+      .details-overlay .stat-card {
+        backdrop-filter: blur(var(--ds-glass-blur));
+        -webkit-backdrop-filter: blur(var(--ds-glass-blur));
+        box-shadow: var(--ds-shadow-panel);
+      }
+      .detail-section {
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid var(--border-color);
+      }
+      .detail-section-label {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: var(--text-dim);
+        font-weight: 600;
+        display: block;
+        margin-bottom: 5px;
+      }
+      .detail-metric {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--accent);
+      }
+      .detail-sublabel {
+        font-size: 10px;
+        color: var(--text-dim);
+        margin-top: 2px;
+      }
+      .detail-metric.success { color: #34d399; }
+      .detail-metric.warning { color: #fbbf24; }
+
+      /* ── Lab Info Bar (bottom) ── */
+      .lab-info-bar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 36px;
+        background: var(--panel-bg);
+        backdrop-filter: blur(var(--ds-glass-blur));
+        -webkit-backdrop-filter: blur(var(--ds-glass-blur));
+        border-top: 1px solid var(--border-color);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 20px;
+        z-index: 50;
+        font-size: 10px;
+        color: var(--text-dim);
+      }
+      .lab-info-bar .info-segment {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .lab-info-bar .info-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+      .lab-info-bar .info-item strong {
+        color: var(--header-text);
+        font-weight: 600;
+      }
+
+      /* ── Scrollbar for sidebar ── */
+      .sidebar::-webkit-scrollbar { width: 4px; }
+      .sidebar::-webkit-scrollbar-thumb { background: var(--ds-navy-700); border-radius: 2px; }
+
+      @media (max-width: 768px) {
+        .details-overlay { top: auto; bottom: 44px; right: 10px; left: 10px; max-width: none; }
+        .lab-info-bar { font-size: 9px; padding: 0 12px; }
+        .instrument-grid { grid-template-columns: 1fr; }
+        .pipeline-flow { justify-content: flex-start; }
       }
     </style>
 </head>
@@ -54,11 +289,11 @@
 </div>
 
 <button class="theme-toggle" aria-label="Toggle dark/light mode" title="Toggle theme">
-    <span class="icon-moon">🌙</span>
-    <span class="icon-sun">☀️</span>
+    <span class="icon-moon">&#x1F319;</span>
+    <span class="icon-sun">&#x2600;&#xFE0F;</span>
 </button>
 
-<button id="sidebar-toggle" class="mobile-toggle">☰</button>
+<button id="sidebar-toggle" class="mobile-toggle" aria-label="Toggle sidebar">&#x2630;</button>
 
 <div class="sidebar">
     <h1>Henkel / Atlas (Lab)</h1>
@@ -68,68 +303,183 @@
         <div class="stat-label">Proprietary Adhesives Mapped</div>
     </div>
     <div class="stat-card">
-        <div class="stat-val tooltip" data-tooltip="Facebook AI Similarity Search - an industry-standard library for efficient similarity search of dense vectors.">FAISS</div>
+        <div class="stat-val tooltip" data-tooltip="Facebook AI Similarity Search &mdash; an industry-standard library for efficient similarity search of dense vectors.">FAISS</div>
         <div class="stat-label">Backend: dreams-atlas.onrender.com</div>
     </div>
 
-    <h2>Controls</h2>
-    <div class="stat-card">
-        <label style="font-size: 12px; color: var(--text-dim); display: block; margin-bottom: 5px;">Filter by Property</label>
-        <select>
-            <option>Viscosity</option>
-            <option>Cure Speed</option>
-            <option>Shear Strength</option>
-            <option>Molecular Weight</option>
-        </select>
+    <!-- ── Instrument Status ── -->
+    <div class="lab-section">
+        <h2>Instrument Status</h2>
+        <div class="instrument-grid">
+            <div class="instrument-card">
+                <div class="inst-header">
+                    <span class="inst-name">LC-MS/MS</span>
+                    <span class="status-dot online" title="Online"></span>
+                </div>
+                <div class="inst-detail">Agilent 6545 Q-TOF<br>Queue: 3 samples</div>
+            </div>
+            <div class="instrument-card">
+                <div class="inst-header">
+                    <span class="inst-name">GC-MS</span>
+                    <span class="status-dot online" title="Online"></span>
+                </div>
+                <div class="inst-detail">Shimadzu GCMS-TQ<br>Idle &mdash; calibrated</div>
+            </div>
+            <div class="instrument-card">
+                <div class="inst-header">
+                    <span class="inst-name">FTIR</span>
+                    <span class="status-dot idle" title="Idle"></span>
+                </div>
+                <div class="inst-detail">Bruker ALPHA II<br>Last run: 14 min ago</div>
+            </div>
+            <div class="instrument-card">
+                <div class="inst-header">
+                    <span class="inst-name">Rheometer</span>
+                    <span class="status-dot online" title="Online"></span>
+                </div>
+                <div class="inst-detail">TA DHR-3<br>Running: visc. sweep</div>
+            </div>
+        </div>
     </div>
 
-    <h2>Similarity (Lab)</h2>
-    <div class="stat-card">
-        <label style="font-size: 12px; color: var(--text-dim); display: block; margin-bottom: 5px;">Anchor <span class="tooltip" data-tooltip="Mass spectra represent the 'fingerprint' of a molecule, showing the distribution of ions by mass-to-charge ratio.">Spectrum</span></label>
-        <select id="specSelect">
-            <option>Loading spectra...</option>
-        </select>
-        <p style="margin-top:8px; font-size:11px; color:var(--text-dim); line-height:1.4;">
-            <span class="tooltip" data-tooltip="High-fidelity mode using the DreaMS foundation model for real-time similarity search.">Lab mode</span>: clicking a point or changing this dropdown will hit the FAISS backend first,
-            then fall back to local 3D similarity if needed.
-        </p>
+    <!-- ── Data Pipeline ── -->
+    <div class="lab-section">
+        <h2>Data Pipeline</h2>
+        <div class="pipeline-flow">
+            <div class="pipeline-node">
+                <div class="node-icon active" title="Instruments acquiring data">&#x1F4E1;</div>
+                <span class="node-label">Acquire</span>
+            </div>
+            <span class="pipeline-arrow active">&#x25B6;</span>
+            <div class="pipeline-node">
+                <div class="node-icon active" title="LIMS ingestion and validation">&#x1F4CB;</div>
+                <span class="node-label">LIMS</span>
+            </div>
+            <span class="pipeline-arrow active">&#x25B6;</span>
+            <div class="pipeline-node">
+                <div class="node-icon active" title="DreaMS embedding computation">&#x1F9EC;</div>
+                <span class="node-label">DreaMS</span>
+            </div>
+            <span class="pipeline-arrow">&#x25B6;</span>
+            <div class="pipeline-node">
+                <div class="node-icon" title="FAISS index update">&#x1F50D;</div>
+                <span class="node-label">FAISS</span>
+            </div>
+            <span class="pipeline-arrow">&#x25B6;</span>
+            <div class="pipeline-node">
+                <div class="node-icon" title="Atlas visualization update">&#x1F30D;</div>
+                <span class="node-label">Atlas</span>
+            </div>
+        </div>
     </div>
 
-    <div class="btn-group">
-        <button class="btn" onclick="exportResultsAsCSV()">Export CSV</button>
-        <button class="btn" id="compareBtn" onclick="toggleCompareMode()" style="background: var(--panel-bg); border: 1px solid var(--border-color); color: var(--text-main);">Compare</button>
-        <button class="btn" style="background: var(--panel-bg); border: 1px solid var(--border-color); color: var(--text-main);" onclick="shareView()">Share View</button>
+    <!-- ── Controls ── -->
+    <div class="lab-section">
+        <h2>Controls</h2>
+        <div class="stat-card">
+            <label style="font-size: 12px; color: var(--text-dim); display: block; margin-bottom: 5px;">Filter by Property</label>
+            <select>
+                <option>Viscosity</option>
+                <option>Cure Speed</option>
+                <option>Shear Strength</option>
+                <option>Molecular Weight</option>
+            </select>
+        </div>
     </div>
 
-    <div class="btn-group" style="margin-top: 8px;">
-        <button class="btn" id="gapAnalysisBtn" onclick="toggleGapAnalysis()" style="background: #1a1a1a; border-color: #333;">Gap Analysis</button>
-        <button class="btn" onclick="calculateCoverage()" style="background: #1a1a1a; border-color: #333;">Coverage Map</button>
-        <button class="btn" onclick="exportReportPDF()" style="background: #1a1a1a; border-color: #333;">Generate Report</button>
+    <!-- ── Similarity Search ── -->
+    <div class="lab-section">
+        <h2>Similarity (Lab)</h2>
+        <div class="stat-card">
+            <label style="font-size: 12px; color: var(--text-dim); display: block; margin-bottom: 5px;">Anchor <span class="tooltip" data-tooltip="Mass spectra represent the 'fingerprint' of a molecule, showing the distribution of ions by mass-to-charge ratio.">Spectrum</span></label>
+            <select id="specSelect">
+                <option>Loading spectra...</option>
+            </select>
+            <p style="margin-top:8px; font-size:11px; color:var(--text-dim); line-height:1.4;">
+                <span class="tooltip" data-tooltip="High-fidelity mode using the DreaMS foundation model for real-time similarity search.">Lab mode</span>: clicking a point or changing this dropdown will hit the FAISS backend first,
+                then fall back to local 3D similarity if needed.
+            </p>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn" onclick="exportResultsAsCSV()">Export CSV</button>
+            <button class="btn btn-secondary" id="compareBtn" onclick="toggleCompareMode()">Compare</button>
+            <button class="btn btn-secondary" onclick="shareView()">Share View</button>
+        </div>
+
+        <div class="btn-group" style="margin-top: 8px;">
+            <button class="btn btn-secondary" id="gapAnalysisBtn" onclick="toggleGapAnalysis()">Gap Analysis</button>
+            <button class="btn btn-secondary" onclick="calculateCoverage()">Coverage Map</button>
+            <button class="btn btn-secondary" onclick="exportReportPDF()">Report</button>
+        </div>
     </div>
 
-    <div style="margin-top: 30px; border-top: 1px solid var(--border-color); padding-top: 20px;">
+    <!-- ── Sample Tracking ── -->
+    <div class="lab-section">
+        <h2>Sample Queue</h2>
+        <table class="sample-table">
+            <thead>
+                <tr>
+                    <th>Sample</th>
+                    <th>Instrument</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>HNK-4821</td>
+                    <td>LC-MS</td>
+                    <td><span class="sample-badge running">Running</span></td>
+                </tr>
+                <tr>
+                    <td>HNK-4822</td>
+                    <td>LC-MS</td>
+                    <td><span class="sample-badge queued">Queued</span></td>
+                </tr>
+                <tr>
+                    <td>HNK-4823</td>
+                    <td>LC-MS</td>
+                    <td><span class="sample-badge queued">Queued</span></td>
+                </tr>
+                <tr>
+                    <td>HNK-4818</td>
+                    <td>GC-MS</td>
+                    <td><span class="sample-badge complete">Done</span></td>
+                </tr>
+                <tr>
+                    <td>HNK-4819</td>
+                    <td>FTIR</td>
+                    <td><span class="sample-badge complete">Done</span></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- ── What You're Seeing ── -->
+    <div class="lab-section">
         <h2>What you're seeing</h2>
         <ul style="font-size: 12px; color: var(--text-dim); padding-left: 15px; line-height: 1.6;">
             <li style="margin-bottom: 8px;"><strong style="color:var(--header-text)">DreaMS Atlas (Lab):</strong> High-fidelity manifold of Henkel's proprietary chemical space.</li>
             <li style="margin-bottom: 8px;"><strong style="color:var(--header-text)">FAISS Similarity:</strong> Real-time neighborhood ranking via the DreaMS foundation model.</li>
-            <li style="margin-bottom: 8px;"><strong style="color:var(--header-text)">Strategic Insight:</strong> Built for R&D leaders to identify "<span class="tooltip" data-tooltip="Unexplored regions of chemical space where new, patentable molecules may exist.">white space</span>" for IP protection.</li>
+            <li style="margin-bottom: 8px;"><strong style="color:var(--header-text)">Strategic Insight:</strong> Built for R&amp;D leaders to identify &ldquo;<span class="tooltip" data-tooltip="Unexplored regions of chemical space where new, patentable molecules may exist.">white space</span>&rdquo; for IP protection.</li>
         </ul>
     </div>
 </div>
 
 <div class="main-view" id="scatter3d"></div>
 
+<!-- ── Details Overlay (right side) ── -->
 <div class="details-overlay">
-  <div id="details-panel" class="stat-card" style="display:none; border-top: 1px solid var(--border-color);">
-      <label style="font-size: 12px; color: var(--text-dim); display: block; margin-bottom: 5px;">Selected Spectrum</label>
+  <div id="details-panel" class="stat-card" style="display:none;">
+      <label class="detail-section-label">Selected Spectrum</label>
       <div id="detail-id" style="font-weight:bold; color:var(--header-text); word-break:break-all; margin-bottom:5px;"></div>
       <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-dim);">
           <span>Cluster: <span id="detail-cluster" style="color:var(--header-text);"></span></span>
       </div>
-      <div style="margin-top:5px; font-size:11px; font-family:monospace; color:var(--text-dim);">
+      <div style="margin-top:5px; font-size:11px; font-family:var(--ds-font-mono); color:var(--text-dim);">
           XYZ: <span id="detail-xyz"></span>
       </div>
-      <div id="structure-container" style="margin-top:10px; height: 140px; background: white; border-radius: 8px; display: none; align-items: center; justify-content: center; overflow: hidden; border: 1px solid var(--border-color);">
+      <div id="structure-container" style="margin-top:10px; height: 140px; background: white; border-radius: var(--ds-radius-sm); display: none; align-items: center; justify-content: center; overflow: hidden; border: 1px solid var(--border-color);">
           <div id="molecule-canvas-container" style="width: 100%; height: 100%;"></div>
       </div>
       <div style="margin-top:8px; font-size:11px; color:var(--text-dim);">
@@ -137,17 +487,41 @@
           <ol id="detail-neighbors" style="margin:4px 0 0; padding-left:16px; max-height:160px; overflow-y:auto; color:var(--text-main)"></ol>
       </div>
 
-      <div id="safety-panel" class="stat-card" style="margin-top:10px; border-top: 1px solid var(--border-color);"></div>
-      <div id="hts-panel" class="stat-card" style="margin-top:10px; border-top: 1px solid var(--border-color);"></div>
-      <div id="sustainability-panel" class="stat-card" style="margin-top:10px; border-top: 1px solid var(--border-color);"></div>
-      <div id="ip-panel" class="stat-card" style="margin-top:10px; border-top: 1px solid var(--border-color);"></div>
+      <div id="safety-panel" class="detail-section"></div>
+      <div id="hts-panel" class="detail-section"></div>
+      <div id="sustainability-panel" class="detail-section"></div>
+      <div id="ip-panel" class="detail-section"></div>
 
-      <div style="margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 12px;">
-          <label style="font-size: 11px; color: var(--text-dim); display: block; margin-bottom: 5px;">R&D Annotation</label>
-          <textarea id="annotationBox" style="width: 100%; background: var(--bg-body); border: 1px solid var(--border-color); color: var(--text-main); font-size: 11px; border-radius: 4px; padding: 6px; height: 40px; resize: none;" placeholder="Add team note..."></textarea>
+      <div class="detail-section">
+          <label class="detail-section-label">R&amp;D Annotation</label>
+          <textarea id="annotationBox" style="width: 100%; background: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-main); font-size: 11px; font-family: var(--ds-font-body); border-radius: var(--ds-radius-sm); padding: 6px; height: 40px; resize: none;" placeholder="Add team note..."></textarea>
           <button class="btn" onclick="saveAnnotation()" style="margin-top: 5px; width: 100%; font-size: 10px; padding: 6px;">Save Note</button>
       </div>
   </div>
+</div>
+
+<!-- ── Lab Info Bar (bottom status bar) ── -->
+<div class="lab-info-bar">
+    <div class="info-segment">
+        <div class="info-item">
+            <span class="status-dot online"></span>
+            <span>FAISS Backend <strong>Connected</strong></span>
+        </div>
+        <div class="info-item">
+            <span>Latency: <strong>42ms</strong></span>
+        </div>
+        <div class="info-item">
+            <span>Index: <strong>24,593 vectors</strong></span>
+        </div>
+    </div>
+    <div class="info-segment">
+        <div class="info-item">
+            <span>Last sync: <strong>12 min ago</strong></span>
+        </div>
+        <div class="info-item">
+            <span>Lab: <strong>Henkel R&amp;D D&uuml;sseldorf</strong></span>
+        </div>
+    </div>
 </div>
 
 <script src="brand-config.js?v=1.0"></script>
@@ -157,7 +531,7 @@
     (function() {
         const toggle = document.querySelector('.theme-toggle');
         const html = document.documentElement;
-        
+
         function setTheme(theme) {
             html.setAttribute('data-theme', theme);
             localStorage.setItem('dreams-theme', theme);
