@@ -11,7 +11,7 @@ import logging
 import os
 import re
 import time
-from collections import deque, OrderedDict
+from collections import deque
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -21,6 +21,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 
+from backend.atlas_schema import validate_atlas_data as validate_atlas_entries
+from backend.cache import check_redis_health, init_cache_and_limiter
 from backend.vault_manager import VaultManager
 
 # ---------------------------------------------------------------------------
@@ -91,6 +93,9 @@ id_map: dict[int, str] = {}
 reverse_map: dict[str, int] = {}
 faiss_available = False
 
+# Atlas metadata — populated once at startup in load_data()
+atlas_metadata: list[dict] | None = None
+
 # Cluster analysis — populated once at startup in load_data()
 cluster_assignments: np.ndarray | None = None  # shape (n,), dtype int
 cluster_stats: dict[int, dict] = {}  # cluster_id -> stats dict
@@ -104,59 +109,13 @@ except Exception:
 
 
 # ---------------------------------------------------------------------------
-# LRU Cache for search results
+# Cache & Rate Limiter (initialized async in lifespan via backend.cache)
 # ---------------------------------------------------------------------------
-class LRUCache:
-    """Simple thread-safe-ish LRU cache (fine for single-worker uvicorn)."""
-
-    def __init__(self, capacity: int = 256):
-        self._cache: OrderedDict[str, list] = OrderedDict()
-        self._capacity = capacity
-
-    def get(self, key: str):
-        if key in self._cache:
-            self._cache.move_to_end(key)
-            return self._cache[key]
-        return None
-
-    def put(self, key: str, value: list):
-        if key in self._cache:
-            self._cache.move_to_end(key)
-        else:
-            if len(self._cache) >= self._capacity:
-                self._cache.popitem(last=False)
-        self._cache[key] = value
+search_cache = None  # Set in lifespan → init_cache_and_limiter()
+_redis_client = None  # Exposed for /healthz
 
 
-search_cache = LRUCache(capacity=512)
-
-
-# ---------------------------------------------------------------------------
-# Rate Limiter (in-memory, per-IP)
-# ---------------------------------------------------------------------------
-class RateLimiter:
-    """Sliding-window rate limiter per IP address."""
-
-    def __init__(self, max_requests: int = 60, window_seconds: int = 60):
-        self.max_requests = max_requests
-        self.window = window_seconds
-        self._hits: dict[str, list[float]] = {}
-
-    def is_allowed(self, ip: str) -> bool:
-        now = time.time()
-        cutoff = now - self.window
-        hits = self._hits.get(ip, [])
-        # Prune old entries
-        hits = [t for t in hits if t > cutoff]
-        if len(hits) >= self.max_requests:
-            self._hits[ip] = hits
-            return False
-        hits.append(now)
-        self._hits[ip] = hits
-        return True
-
-
-rate_limiter = RateLimiter(max_requests=60, window_seconds=60)
+rate_limiter = None  # Set in lifespan → init_cache_and_limiter()
 
 
 # ---------------------------------------------------------------------------
@@ -281,13 +240,16 @@ def numpy_search(
 # Data Loading
 # ---------------------------------------------------------------------------
 def load_data(retries=3):
-    global index, vectors, cluster_assignments, cluster_stats
+    global index, vectors, cluster_assignments, cluster_stats, atlas_metadata
 
     for attempt in range(retries):
         logger.info(f"Loading data (attempt {attempt + 1}/{retries})...")
         try:
             embeddings_path = PROJECT_ROOT / "embeddings_checkpoint.npy"
-            atlas_path = PROJECT_ROOT / "atlas_data.json"
+            # Prefer real spectral embeddings over legacy synthetic data
+            atlas_real_path = PROJECT_ROOT / "atlas_data_real.json"
+            atlas_legacy_path = PROJECT_ROOT / "atlas_data.json"
+            atlas_path = atlas_real_path if atlas_real_path.exists() else atlas_legacy_path
 
             id_map.clear()
             reverse_map.clear()
@@ -297,12 +259,19 @@ def load_data(retries=3):
             if atlas_path.exists():
                 with open(atlas_path, "r") as f:
                     atlas_json = json.load(f)
+                # Validate atlas data schema (rejects NaN/Inf)
+                try:
+                    validate_atlas_entries(atlas_json)
+                except ValueError as ve:
+                    logger.error("Atlas validation failed: %s", ve)
+                    raise
                 for i, item in enumerate(atlas_json):
                     str_id = item.get("id", f"ID_{i}")
                     id_map[i] = str_id
                     reverse_map[str_id] = i
                 n_items = len(atlas_json)
-                logger.info(f"Loaded {len(id_map)} ID mappings")
+                atlas_metadata = atlas_json
+                logger.info(f"Loaded {len(id_map)} ID mappings from {atlas_path.name}")
 
             if embeddings_path.exists():
                 vectors = np.load(str(embeddings_path)).astype("float32")
@@ -355,8 +324,12 @@ def load_data(retries=3):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global search_cache, rate_limiter, _redis_client
     load_api_keys()
     load_data()
+    search_cache, rate_limiter, _redis_client = await init_cache_and_limiter(
+        cache_capacity=512, cache_ttl=3600, rate_max=60, rate_window=60,
+    )
     yield
 
 
@@ -433,13 +406,19 @@ async def api_key_middleware(request: Request, call_next):
 # API Endpoints
 # ---------------------------------------------------------------------------
 @app.get("/healthz")
-def healthz():
-    return {"status": "alive", "vectors": len(id_map), "faiss": index is not None}
+async def healthz():
+    redis_ok = await check_redis_health()
+    return {
+        "status": "alive",
+        "vectors": len(id_map),
+        "faiss": index is not None,
+        "redis_connected": redis_ok,
+    }
 
 
 @app.get("/api/status")
 def api_status():
-    return {"status": "ok", "vectors": len(id_map), "cache": len(search_cache._cache)}
+    return {"status": "ok", "vectors": len(id_map), "cache": search_cache.size if search_cache else 0, "redis_connected": _redis_client is not None}
 
 
 @app.get("/api/logs")
@@ -448,9 +427,9 @@ def get_logs():
 
 
 @app.get("/api/search")
-def api_search(request: Request, id: str, k: int = 20, tenant_id: str = "default"):
+async def api_search(request: Request, id: str, k: int = 20, tenant_id: str = "default"):
     client_ip = request.client.host if request.client else "unknown"
-    if not rate_limiter.is_allowed(client_ip):
+    if not await rate_limiter.is_allowed(client_ip):
         raise HTTPException(status_code=429, detail="Rate limit")
 
     clean_id = validate_search_id(id)
@@ -465,7 +444,7 @@ def api_search(request: Request, id: str, k: int = 20, tenant_id: str = "default
     logger.info(f"SEARCH [Tenant: {effective_tenant}] | ID: {clean_id} | k: {k}")
 
     cache_key = f"{effective_tenant}:{clean_id}:{k}"
-    cached = search_cache.get(cache_key)
+    cached = await search_cache.get(cache_key)
     if cached:
         return {"query": clean_id, "tenant": effective_tenant, "results": cached}
 
@@ -501,7 +480,7 @@ def api_search(request: Request, id: str, k: int = 20, tenant_id: str = "default
         results.append({"id": t_id_map.get(int(idx)),
                        "score": round(1.0/(1.0+dist), 6), "rank": rank})
 
-    search_cache.put(cache_key, results)
+    await search_cache.put(cache_key, results)
     return {"query": clean_id, "tenant": effective_tenant, "results": results}
 
 
@@ -519,14 +498,14 @@ def sso_callback(token: str):
 
 
 @app.get("/api/export")
-def api_export(ids: str, request: Request):
+async def api_export(ids: str, request: Request):
     """Export compound IDs as CSV."""
     import csv
     import io
     from fastapi.responses import StreamingResponse
 
     client_ip = request.client.host if request.client else "unknown"
-    if not rate_limiter.is_allowed(client_ip):
+    if not await rate_limiter.is_allowed(client_ip):
         raise HTTPException(status_code=429, detail="Rate limit")
 
     id_list = [i.strip() for i in ids.split(",") if i.strip()]
@@ -727,6 +706,29 @@ def cluster_insights(cluster_id: int):
         "nearest_cluster_distance": stats["nearest_cluster_distance"],
         "top_representative_ids": stats["top_representative_ids"],
     }
+
+
+# ---------------------------------------------------------------------------
+# Atlas Points (real spectral embeddings for 3D viewer)
+# ---------------------------------------------------------------------------
+
+
+@app.get("/api/atlas/points")
+def atlas_points():
+    """Return 3D atlas points for the viewer — real UMAP embeddings."""
+    if not atlas_metadata:
+        raise HTTPException(status_code=503, detail="Atlas data not loaded")
+    return atlas_metadata
+
+
+@app.get("/api/atlas/manifest")
+def atlas_manifest():
+    """Return embedding manifest with checksums and dataset metadata."""
+    manifest_path = PROJECT_ROOT / "embedding_manifest.json"
+    if not manifest_path.exists():
+        raise HTTPException(status_code=404, detail="Manifest not found")
+    with open(manifest_path) as f:
+        return json.load(f)
 
 
 # ---------------------------------------------------------------------------

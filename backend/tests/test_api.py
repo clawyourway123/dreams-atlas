@@ -16,7 +16,7 @@ import numpy as np
 import pytest
 
 import backend.server as server_module
-from backend.server import app, rate_limiter, search_cache
+from backend.server import app
 from fastapi.testclient import TestClient
 
 # Demo key that matches the fixture injected by inject_test_api_keys
@@ -71,15 +71,20 @@ def inject_test_data(monkeypatch):
     yield
 
     # Clear caches between tests so state doesn't bleed
-    search_cache._cache.clear()
+    if server_module.search_cache is not None and hasattr(server_module.search_cache, '_cache'):
+        server_module.search_cache._cache.clear()
 
 
 @pytest.fixture(autouse=True)
 def reset_rate_limiter():
     """Clear the in-process rate limiter between tests."""
-    rate_limiter._hits.clear()
+    rl = server_module.rate_limiter
+    if rl is not None and hasattr(rl, '_hits'):
+        rl._hits.clear()
     yield
-    rate_limiter._hits.clear()
+    rl = server_module.rate_limiter
+    if rl is not None and hasattr(rl, '_hits'):
+        rl._hits.clear()
 
 
 @pytest.fixture(autouse=True)
@@ -175,13 +180,14 @@ def test_cache_serves_second_request(monkeypatch, client):
     call returns the cached value without calling put again.
     """
     put_calls = []
-    original_put = search_cache.put
+    cache = server_module.search_cache
+    original_put = cache.put
 
-    def spy_put(key, value):
+    async def spy_put(key, value):
         put_calls.append(key)
-        original_put(key, value)
+        await original_put(key, value)
 
-    monkeypatch.setattr(search_cache, "put", spy_put)
+    monkeypatch.setattr(cache, "put", spy_put)
 
     r1 = client.get(f"/api/search?id={TEST_ID}&k=20", headers=AUTH_HEADER)
     assert r1.status_code == 200
