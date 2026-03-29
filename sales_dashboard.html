@@ -438,13 +438,25 @@
         @media (max-width: 1024px) {
             .kpi-strip { grid-template-columns: repeat(2, 1fr); }
             .chart-grid { grid-template-columns: 1fr; }
+            .chart-container { min-height: 260px; }
+            .dashboard { padding: var(--ds-space-4) var(--ds-space-6); }
+        }
+
+        @media (max-width: 768px) {
+            .topbar { flex-direction: column; gap: var(--ds-space-2); text-align: center; }
+            .topbar-status { justify-content: center; }
+            .chart-panel-header { flex-direction: column; align-items: flex-start; gap: var(--ds-space-2); }
+            .date-range-selector { align-self: flex-start; }
         }
 
         @media (max-width: 640px) {
             .kpi-strip { grid-template-columns: 1fr; }
-            .dashboard { padding: var(--ds-space-4); }
+            .dashboard { padding: var(--ds-space-3); }
             .topbar { padding: var(--ds-space-3) var(--ds-space-4); }
             .pipeline-table { font-size: var(--ds-text-xs); }
+            .pipeline-table td { padding: var(--ds-space-2) var(--ds-space-3); }
+            .company-avatar { width: 28px; height: 28px; font-size: 10px; }
+            .chart-container { min-height: 220px; }
         }
 
         /* ── Reduced Motion ── */
@@ -459,6 +471,104 @@
         :focus-visible {
             outline: var(--ds-focus-ring);
             outline-offset: var(--ds-focus-offset);
+        }
+
+        /* ── Entry Animations ── */
+        @keyframes fadeSlideUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-entry {
+            opacity: 0;
+            animation: fadeSlideUp 0.5s var(--ds-ease-out) forwards;
+        }
+
+        .kpi-card.animate-entry:nth-child(1) { animation-delay: 0.05s; }
+        .kpi-card.animate-entry:nth-child(2) { animation-delay: 0.12s; }
+        .kpi-card.animate-entry:nth-child(3) { animation-delay: 0.19s; }
+        .kpi-card.animate-entry:nth-child(4) { animation-delay: 0.26s; }
+
+        .chart-panel.animate-entry { animation-delay: 0.3s; }
+        .chart-grid:nth-of-type(2) .chart-panel.animate-entry:nth-child(1) { animation-delay: 0.35s; }
+        .chart-grid:nth-of-type(2) .chart-panel.animate-entry:nth-child(2) { animation-delay: 0.42s; }
+        .chart-grid:nth-of-type(3) .chart-panel.animate-entry:nth-child(1) { animation-delay: 0.49s; }
+        .chart-grid:nth-of-type(3) .chart-panel.animate-entry:nth-child(2) { animation-delay: 0.56s; }
+
+        .pipeline-section.animate-entry { animation-delay: 0.45s; }
+
+        /* ── Chart hover micro-interactions ── */
+        .chart-panel {
+            transition: border-color var(--ds-transition-fast), box-shadow var(--ds-transition-fast);
+        }
+
+        .chart-panel:hover {
+            border-color: var(--ds-border-hover);
+            box-shadow: var(--ds-glass-highlight), 0 0 24px rgba(45, 212, 191, 0.06);
+        }
+
+        /* ── Date Range Selector ── */
+        .date-range-selector {
+            display: flex;
+            gap: 4px;
+            background: var(--ds-bg-surface);
+            border: 1px solid var(--ds-border);
+            border-radius: var(--ds-radius-md);
+            padding: 2px;
+        }
+
+        .date-range-btn {
+            padding: 4px 12px;
+            border: none;
+            border-radius: var(--ds-radius-sm);
+            background: transparent;
+            color: var(--ds-text-dim);
+            font-family: var(--ds-font-body);
+            font-size: var(--ds-text-xs);
+            font-weight: var(--ds-weight-medium);
+            cursor: pointer;
+            transition: all var(--ds-transition-fast);
+        }
+
+        .date-range-btn:hover {
+            color: var(--ds-text-secondary);
+        }
+
+        .date-range-btn.active {
+            background: var(--ds-accent-surface);
+            color: var(--ds-accent);
+            border: 1px solid var(--ds-border-accent);
+        }
+
+        /* ── Active filter indicator ── */
+        .filter-active-badge {
+            display: none;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: var(--ds-radius-pill);
+            font-size: var(--ds-text-xs);
+            font-weight: var(--ds-weight-medium);
+            color: var(--ds-accent);
+            background: var(--ds-accent-surface);
+            border: 1px solid var(--ds-border-accent);
+            cursor: pointer;
+            transition: all var(--ds-transition-fast);
+        }
+
+        .filter-active-badge.visible { display: inline-flex; }
+
+        .filter-active-badge:hover {
+            background: rgba(45, 212, 191, 0.2);
+        }
+
+        /* ── Pipeline row highlight on drill-down ── */
+        .pipeline-table tbody tr.highlighted {
+            background: rgba(45, 212, 191, 0.06);
+        }
+
+        .pipeline-table tbody tr.dimmed {
+            opacity: 0.35;
         }
     </style>
 </head>
@@ -494,22 +604,22 @@
 
         <!-- KPI Strip -->
         <section class="kpi-strip" aria-label="Key Performance Indicators">
-            <article class="kpi-card">
+            <article class="kpi-card animate-entry">
                 <div class="kpi-label">Total Pipeline Value</div>
                 <div class="kpi-value">$4.2M</div>
                 <span class="kpi-change positive" aria-label="increased 23%">+23% QoQ</span>
             </article>
-            <article class="kpi-card">
+            <article class="kpi-card animate-entry">
                 <div class="kpi-label">Active Demos</div>
                 <div class="kpi-value">12</div>
                 <span class="kpi-change positive" aria-label="increased by 4">+4 this week</span>
             </article>
-            <article class="kpi-card">
+            <article class="kpi-card animate-entry">
                 <div class="kpi-label">Demo-to-Meeting Rate</div>
                 <div class="kpi-value">68%</div>
                 <span class="kpi-change positive" aria-label="increased 12%">+12% vs prev</span>
             </article>
-            <article class="kpi-card">
+            <article class="kpi-card animate-entry">
                 <div class="kpi-label">Avg. Engagement Score</div>
                 <div class="kpi-value">8.4</div>
                 <span class="kpi-change positive" aria-label="increased 0.6">+0.6 pts</span>
@@ -518,14 +628,19 @@
 
         <!-- Charts Row 1: Revenue & Funnel -->
         <section class="chart-grid" aria-label="Revenue and Funnel Charts">
-            <div class="chart-panel">
+            <div class="chart-panel animate-entry">
                 <div class="chart-panel-header">
                     <h2 class="chart-panel-title">Revenue Pipeline Trend</h2>
-                    <span class="chart-panel-badge">Q1 2026</span>
+                    <div class="date-range-selector" role="group" aria-label="Date range">
+                        <button class="date-range-btn" data-range="3m">3M</button>
+                        <button class="date-range-btn active" data-range="6m">6M</button>
+                        <button class="date-range-btn" data-range="1y">1Y</button>
+                        <button class="date-range-btn" data-range="all">All</button>
+                    </div>
                 </div>
                 <div id="revenueChart" class="chart-container" role="img" aria-label="Revenue pipeline trend chart"></div>
             </div>
-            <div class="chart-panel">
+            <div class="chart-panel animate-entry">
                 <div class="chart-panel-header">
                     <h2 class="chart-panel-title">Sales Funnel</h2>
                     <span class="chart-panel-badge">All Time</span>
@@ -536,14 +651,14 @@
 
         <!-- Charts Row 2: Engagement & Segment -->
         <section class="chart-grid" aria-label="Engagement and Segment Charts">
-            <div class="chart-panel">
+            <div class="chart-panel animate-entry">
                 <div class="chart-panel-header">
                     <h2 class="chart-panel-title">Demo Engagement by Company</h2>
                     <span class="chart-panel-badge">Last 30 Days</span>
                 </div>
                 <div id="engagementChart" class="chart-container" role="img" aria-label="Demo engagement by company chart"></div>
             </div>
-            <div class="chart-panel">
+            <div class="chart-panel animate-entry">
                 <div class="chart-panel-header">
                     <h2 class="chart-panel-title">Pipeline by Industry Segment</h2>
                     <span class="chart-panel-badge">Active Leads</span>
@@ -553,10 +668,15 @@
         </section>
 
         <!-- Lead Pipeline Table -->
-        <section class="chart-panel pipeline-section" aria-label="Lead Pipeline">
+        <section class="chart-panel pipeline-section animate-entry" aria-label="Lead Pipeline">
             <div class="chart-panel-header">
                 <h2 class="chart-panel-title">Lead Pipeline</h2>
-                <span class="chart-panel-badge">8 Active Leads</span>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span id="filterBadge" class="filter-active-badge" onclick="clearDrillDown()" title="Click to clear filter">
+                        <span id="filterLabel"></span> ✕
+                    </span>
+                    <span class="chart-panel-badge">8 Active Leads</span>
+                </div>
             </div>
             <div style="overflow-x: auto;">
                 <table class="pipeline-table">
@@ -578,7 +698,7 @@
 
         <!-- Activity Feed + Key Metrics -->
         <section class="chart-grid" aria-label="Activity Feed and Key Metrics">
-            <div class="chart-panel">
+            <div class="chart-panel animate-entry">
                 <div class="chart-panel-header">
                     <h2 class="chart-panel-title">Recent Activity</h2>
                     <span class="chart-panel-badge">Live Feed</span>
@@ -586,7 +706,7 @@
                 <div id="activityFeed" class="activity-feed" role="log" aria-label="Recent activity feed">
                 </div>
             </div>
-            <div class="chart-panel">
+            <div class="chart-panel animate-entry">
                 <div class="chart-panel-header">
                     <h2 class="chart-panel-title">Feature Interest Heatmap</h2>
                     <span class="chart-panel-badge">Across Demos</span>
@@ -598,7 +718,7 @@
     </main>
 
     <script>
-    // ─── Plotly Theme (matching design system tokens) ───
+    // ─── Plotly Theme (matching design system tokens: --ds-chart-1 through --ds-chart-8) ───
     const dsColors = {
         bg:        'rgba(0,0,0,0)',
         gridColor: 'rgba(255,255,255,0.04)',
@@ -627,31 +747,80 @@
         responsive: true
     };
 
+    // ─── Shared state ───
+    let activeDrillDown = null; // { source: 'segment'|'engagement'|'heatmap', value: string }
+
+    // ─── Pipeline lead data (shared for drill-down) ───
+    const pipelineLeads = [
+        { name: 'Henkel', abbr: 'HK', industry: 'Adhesives & Sealants', value: '$1.2M', stage: 'hot', stageLabel: 'Negotiation', engagement: 95, demos: 42, lastActivity: '2h ago' },
+        { name: '3M', abbr: '3M', industry: 'Diversified Materials', value: '$850K', stage: 'hot', stageLabel: 'Proposal', engagement: 82, demos: 28, lastActivity: '4h ago' },
+        { name: 'BASF', abbr: 'BA', industry: 'Chemical Manufacturing', value: '$620K', stage: 'warm', stageLabel: 'Evaluation', engagement: 72, demos: 18, lastActivity: '1d ago' },
+        { name: 'Dow', abbr: 'DW', industry: 'Specialty Chemicals', value: '$540K', stage: 'warm', stageLabel: 'Demo Phase', engagement: 65, demos: 15, lastActivity: '1d ago' },
+        { name: 'AkzoNobel', abbr: 'AN', industry: 'Coatings & Paints', value: '$380K', stage: 'active', stageLabel: 'Active Interest', engagement: 54, demos: 12, lastActivity: '3d ago' },
+        { name: 'DuPont', abbr: 'DP', industry: 'Specialty Products', value: '$290K', stage: 'active', stageLabel: 'Pilot Program', engagement: 48, demos: 9, lastActivity: '4d ago' },
+        { name: 'Evonik', abbr: 'EV', industry: 'Specialty Chemicals', value: '$180K', stage: 'new', stageLabel: 'Initial Contact', engagement: 32, demos: 5, lastActivity: '5d ago' },
+        { name: 'Arkema', abbr: 'AR', industry: 'Advanced Materials', value: '$140K', stage: 'new', stageLabel: 'Outreach', engagement: 22, demos: 3, lastActivity: '1w ago' }
+    ];
+
+    // ─── Industry-to-company mapping for segment drill-down ───
+    const industryToCompanies = {
+        'Adhesives & Sealants': ['Henkel'],
+        'Coatings': ['AkzoNobel'],
+        'Specialty Chemicals': ['Dow', 'Evonik'],
+        'Consumer Products': ['3M'],
+        'Automotive': ['BASF', 'DuPont', 'Arkema']
+    };
+
+    // ─── Revenue data sets for date range selector ───
+    const revenueData = {
+        '3m': {
+            months: ['Jan', 'Feb', 'Mar'],
+            pipeline: [2.8, 3.5, 4.2],
+            closed: [1.0, 1.2, 1.6]
+        },
+        '6m': {
+            months: ['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'],
+            pipeline: [1.2, 1.8, 2.1, 2.8, 3.5, 4.2],
+            closed: [0.3, 0.5, 0.8, 1.0, 1.2, 1.6]
+        },
+        '1y': {
+            months: ['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'],
+            pipeline: [0.4, 0.5, 0.6, 0.7, 0.9, 1.0, 1.2, 1.8, 2.1, 2.8, 3.5, 4.2],
+            closed: [0.1, 0.1, 0.2, 0.2, 0.2, 0.3, 0.3, 0.5, 0.8, 1.0, 1.2, 1.6]
+        },
+        'all': {
+            months: ['Jan \'25','Apr','Jul','Oct','Jan \'26','Mar'],
+            pipeline: [0.2, 0.4, 0.7, 1.2, 2.8, 4.2],
+            closed: [0.0, 0.1, 0.2, 0.3, 1.0, 1.6]
+        }
+    };
+
     // ─── Revenue Pipeline Chart ───
-    function renderRevenueChart() {
-        const months = ['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'];
-        Plotly.newPlot('revenueChart', [
+    function renderRevenueChart(range) {
+        range = range || '6m';
+        const d = revenueData[range];
+        Plotly.react('revenueChart', [
             {
-                x: months,
-                y: [1.2, 1.8, 2.1, 2.8, 3.5, 4.2],
+                x: d.months,
+                y: d.pipeline,
                 type: 'scatter',
                 mode: 'lines+markers',
                 name: 'Pipeline ($M)',
                 line: { color: dsColors.accent, width: 3, shape: 'spline' },
-                marker: { size: 8, color: dsColors.accent },
+                marker: { size: 8, color: dsColors.accent, symbol: 'circle' },
                 fill: 'tozeroy',
                 fillcolor: 'rgba(45, 212, 191, 0.08)',
-                hovertemplate: '<b>%{x}</b><br>Pipeline: $%{y}M<extra></extra>'
+                hovertemplate: '<b>%{x}</b><br>Pipeline: $%{y:.1f}M<extra></extra>'
             },
             {
-                x: months,
-                y: [0.3, 0.5, 0.8, 1.0, 1.2, 1.6],
+                x: d.months,
+                y: d.closed,
                 type: 'scatter',
                 mode: 'lines+markers',
                 name: 'Closed ($M)',
                 line: { color: dsColors.chart[1], width: 2, dash: 'dot', shape: 'spline' },
-                marker: { size: 6, color: dsColors.chart[1] },
-                hovertemplate: '<b>%{x}</b><br>Closed: $%{y}M<extra></extra>'
+                marker: { size: 6, color: dsColors.chart[1], symbol: 'diamond' },
+                hovertemplate: '<b>%{x}</b><br>Closed: $%{y:.1f}M<extra></extra>'
             }
         ], {
             ...dsLayout,
@@ -659,6 +828,17 @@
             legend: { x: 0, y: 1.15, orientation: 'h', font: { size: 11 } },
             yaxis: { ...dsLayout.yaxis, title: { text: 'Value ($M)', font: { size: 11 } } }
         }, dsConfig);
+    }
+
+    // ─── Date Range Selector ───
+    function initDateRangeSelector() {
+        document.querySelectorAll('.date-range-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.date-range-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                renderRevenueChart(btn.dataset.range);
+            });
+        });
     }
 
     // ─── Sales Funnel Chart ───
@@ -682,7 +862,7 @@
         }, dsConfig);
     }
 
-    // ─── Engagement Bar Chart ───
+    // ─── Engagement Bar Chart (with drill-down) ───
     function renderEngagementChart() {
         const companies = ['Henkel', '3M', 'BASF', 'Dow', 'AkzoNobel', 'DuPont', 'Evonik', 'Arkema'];
         const interactions = [142, 98, 87, 72, 65, 54, 41, 28];
@@ -697,16 +877,21 @@
             text: interactions.map(String),
             textposition: 'outside',
             textfont: { size: 11, color: dsColors.textLight },
-            hovertemplate: '<b>%{y}</b><br>Interactions: %{x}<extra></extra>'
+            hovertemplate: '<b>%{y}</b><br>Interactions: %{x}<br><i>Click to filter pipeline</i><extra></extra>'
         }], {
             ...dsLayout,
             margin: { t: 10, r: 50, b: 30, l: 90 },
             xaxis: { ...dsLayout.xaxis, title: { text: 'Total Interactions', font: { size: 11 } } },
             yaxis: { ...dsLayout.yaxis, autorange: 'reversed' }
         }, dsConfig);
+
+        document.getElementById('engagementChart').on('plotly_click', function(data) {
+            const company = data.points[0].y;
+            applyDrillDown('engagement', company);
+        });
     }
 
-    // ─── Segment Donut Chart ───
+    // ─── Segment Donut Chart (with drill-down) ───
     function renderSegmentChart() {
         Plotly.newPlot('segmentChart', [{
             type: 'pie',
@@ -720,7 +905,7 @@
             textinfo: 'percent',
             textposition: 'outside',
             textfont: { size: 11, color: dsColors.textLight },
-            hovertemplate: '<b>%{label}</b><br>Value: $%{value}K<br>Share: %{percent}<extra></extra>',
+            hovertemplate: '<b>%{label}</b><br>Value: $%{value}K<br>Share: %{percent}<br><i>Click to filter pipeline</i><extra></extra>',
             sort: false
         }], {
             ...dsLayout,
@@ -738,9 +923,14 @@
                 showarrow: false
             }]
         }, dsConfig);
+
+        document.getElementById('segmentChart').on('plotly_click', function(data) {
+            const segment = data.points[0].label;
+            applyDrillDown('segment', segment);
+        });
     }
 
-    // ─── Feature Interest Heatmap ───
+    // ─── Feature Interest Heatmap (with drill-down) ───
     function renderHeatmap() {
         const features = ['Spectral Matching', 'Batch Analysis', 'Custom Models', '3D Atlas', 'API Access', 'Export Tools'];
         const companies = ['Henkel', '3M', 'BASF', 'Dow', 'DuPont'];
@@ -769,7 +959,7 @@
             text: z.map(row => row.map(v => v + '/10')),
             texttemplate: '%{text}',
             textfont: { size: 11, color: '#fff' },
-            hovertemplate: '<b>%{y}</b> x <b>%{x}</b><br>Interest: %{z}/10<extra></extra>',
+            hovertemplate: '<b>%{y}</b> x <b>%{x}</b><br>Interest: %{z}/10<br><i>Click to filter pipeline</i><extra></extra>',
             xgap: 3,
             ygap: 3
         }], {
@@ -777,23 +967,68 @@
             margin: { t: 10, r: 10, b: 40, l: 120 },
             yaxis: { ...dsLayout.yaxis, autorange: 'reversed' }
         }, dsConfig);
+
+        document.getElementById('heatmapChart').on('plotly_click', function(data) {
+            const company = data.points[0].x;
+            applyDrillDown('heatmap', company);
+        });
     }
 
-    // ─── Pipeline Table Data ───
-    function renderPipelineTable() {
-        const leads = [
-            { name: 'Henkel', abbr: 'HK', industry: 'Adhesives & Sealants', value: '$1.2M', stage: 'hot', stageLabel: 'Negotiation', engagement: 95, demos: 42, lastActivity: '2h ago' },
-            { name: '3M', abbr: '3M', industry: 'Diversified Materials', value: '$850K', stage: 'hot', stageLabel: 'Proposal', engagement: 82, demos: 28, lastActivity: '4h ago' },
-            { name: 'BASF', abbr: 'BA', industry: 'Chemical Manufacturing', value: '$620K', stage: 'warm', stageLabel: 'Evaluation', engagement: 72, demos: 18, lastActivity: '1d ago' },
-            { name: 'Dow', abbr: 'DW', industry: 'Specialty Chemicals', value: '$540K', stage: 'warm', stageLabel: 'Demo Phase', engagement: 65, demos: 15, lastActivity: '1d ago' },
-            { name: 'AkzoNobel', abbr: 'AN', industry: 'Coatings & Paints', value: '$380K', stage: 'active', stageLabel: 'Active Interest', engagement: 54, demos: 12, lastActivity: '3d ago' },
-            { name: 'DuPont', abbr: 'DP', industry: 'Specialty Products', value: '$290K', stage: 'active', stageLabel: 'Pilot Program', engagement: 48, demos: 9, lastActivity: '4d ago' },
-            { name: 'Evonik', abbr: 'EV', industry: 'Specialty Chemicals', value: '$180K', stage: 'new', stageLabel: 'Initial Contact', engagement: 32, demos: 5, lastActivity: '5d ago' },
-            { name: 'Arkema', abbr: 'AR', industry: 'Advanced Materials', value: '$140K', stage: 'new', stageLabel: 'Outreach', engagement: 22, demos: 3, lastActivity: '1w ago' }
-        ];
+    // ─── Drill-Down: filter pipeline table from chart clicks ───
+    function applyDrillDown(source, value) {
+        // Toggle off if clicking the same filter
+        if (activeDrillDown && activeDrillDown.source === source && activeDrillDown.value === value) {
+            clearDrillDown();
+            return;
+        }
 
+        activeDrillDown = { source, value };
+
+        // Determine which company names match
+        let matchNames;
+        if (source === 'segment') {
+            matchNames = industryToCompanies[value] || [];
+        } else {
+            matchNames = [value];
+        }
+
+        // Highlight/dim table rows
+        const rows = document.querySelectorAll('#pipelineBody tr');
+        rows.forEach(row => {
+            const nameEl = row.querySelector('.company-name');
+            if (!nameEl) return;
+            const name = nameEl.textContent.trim();
+            if (matchNames.includes(name)) {
+                row.classList.add('highlighted');
+                row.classList.remove('dimmed');
+            } else {
+                row.classList.remove('highlighted');
+                row.classList.add('dimmed');
+            }
+        });
+
+        // Show filter badge
+        const badge = document.getElementById('filterBadge');
+        const label = document.getElementById('filterLabel');
+        label.textContent = source === 'segment' ? value : value;
+        badge.classList.add('visible');
+
+        // Smooth scroll to pipeline
+        document.querySelector('.pipeline-section').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function clearDrillDown() {
+        activeDrillDown = null;
+        document.querySelectorAll('#pipelineBody tr').forEach(row => {
+            row.classList.remove('highlighted', 'dimmed');
+        });
+        document.getElementById('filterBadge').classList.remove('visible');
+    }
+
+    // ─── Pipeline Table ───
+    function renderPipelineTable() {
         const tbody = document.getElementById('pipelineBody');
-        tbody.innerHTML = leads.map(lead => {
+        tbody.innerHTML = pipelineLeads.map(lead => {
             const engClass = lead.engagement > 70 ? 'engagement-high' : lead.engagement > 40 ? 'engagement-medium' : 'engagement-low';
             return `
                 <tr>
@@ -873,13 +1108,14 @@
 
     // ─── Initialize ───
     document.addEventListener('DOMContentLoaded', () => {
-        renderRevenueChart();
+        renderRevenueChart('6m');
         renderFunnelChart();
         renderEngagementChart();
         renderSegmentChart();
         renderHeatmap();
         renderPipelineTable();
         renderActivityFeed();
+        initDateRangeSelector();
         fetchLiveLogs();
         setInterval(fetchLiveLogs, 15000);
     });
