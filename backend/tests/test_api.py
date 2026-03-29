@@ -16,7 +16,9 @@ import numpy as np
 import pytest
 
 import backend.server as server_module
-from backend.server import app, rate_limiter, search_cache
+from backend.server import (
+    app, rate_limiter, search_cache, auth_failure_limiter, _hash_key,
+)
 from fastapi.testclient import TestClient
 
 # Demo key that matches the fixture injected by inject_test_api_keys
@@ -78,8 +80,10 @@ def inject_test_data(monkeypatch):
 def reset_rate_limiter():
     """Clear the in-process rate limiter between tests."""
     rate_limiter._hits.clear()
+    auth_failure_limiter._failures.clear()
     yield
     rate_limiter._hits.clear()
+    auth_failure_limiter._failures.clear()
 
 
 @pytest.fixture(autouse=True)
@@ -91,8 +95,8 @@ def inject_test_api_keys(monkeypatch):
     overwrite the test keys when it runs at startup.
     """
     test_keys = {
-        VALID_KEY: {"tenant_id": "default", "label": "Test default key"},
-        VALID_KEY_ALPHA: {"tenant_id": "client_alpha", "label": "Test alpha key"},
+        _hash_key(VALID_KEY): {"tenant_id": "default", "label": "Test default key"},
+        _hash_key(VALID_KEY_ALPHA): {"tenant_id": "client_alpha", "label": "Test alpha key"},
     }
     monkeypatch.setattr(server_module, "api_keys", test_keys)
     monkeypatch.setattr(server_module, "load_api_keys", lambda: None)
@@ -351,3 +355,77 @@ def test_alpha_key_sets_correct_tenant(client):
     )
     assert response.status_code == 200
     assert response.json()["tenant"] == "client_alpha"
+
+
+# ---------------------------------------------------------------------------
+# 11. Security hardening tests
+# ---------------------------------------------------------------------------
+
+
+def test_hsts_header_present(client):
+    """All responses must include Strict-Transport-Security."""
+    response = client.get("/healthz")
+    assert response.status_code == 200
+    hsts = response.headers.get("strict-transport-security")
+    assert hsts is not None, "HSTS header missing"
+    assert "max-age=63072000" in hsts
+    assert "includeSubDomains" in hsts
+
+
+def test_auth_failure_rate_limiter_blocks_after_5_failures(client):
+    """After 5 failed auth attempts the IP should get 429."""
+    for _ in range(5):
+        r = client.get(
+            f"/api/search?id={TEST_ID}&k=1",
+            headers={"Authorization": "Bearer bad-key"},
+        )
+        assert r.status_code == 401
+
+    # 6th attempt should be blocked
+    r = client.get(
+        f"/api/search?id={TEST_ID}&k=1",
+        headers={"Authorization": "Bearer bad-key"},
+    )
+    assert r.status_code == 429
+    assert "authentication failures" in r.json()["detail"].lower()
+
+
+def test_path_traversal_backend_denied(client):
+    """The 'backend' directory must be blocked from static file serving."""
+    response = client.get("/backend/server.py", headers=AUTH_HEADER)
+    assert response.status_code == 403
+
+
+def test_path_traversal_git_denied(client):
+    """The '.git' directory must be blocked from static file serving."""
+    response = client.get("/.git/config", headers=AUTH_HEADER)
+    assert response.status_code in (403, 404)
+
+
+def test_path_traversal_env_denied(client):
+    """The '.env' path must be blocked from static file serving."""
+    response = client.get("/.env", headers=AUTH_HEADER)
+    assert response.status_code in (403, 404)
+
+
+def test_404_does_not_leak_path(client):
+    """404 responses must not include the filesystem path."""
+    response = client.get("/nonexistent-file.txt", headers=AUTH_HEADER)
+    assert response.status_code == 404
+    body = response.json()
+    detail = body.get("detail", "")
+    assert "nonexistent-file.txt" not in detail, "404 response leaks filesystem path"
+
+
+def test_status_endpoint_public(client):
+    """/api/status must be accessible without auth."""
+    response = client.get("/api/status")
+    assert response.status_code == 200
+
+
+def test_mutation_endpoint_requires_auth(client):
+    """/api/track (mutation) must require auth even when keys are loaded."""
+    response = client.post("/api/track", json={"event": "test"})
+    # With keys loaded, missing key on mutation endpoint should be 401
+    # (the middleware checks AUTH_REQUIRED_PATHS)
+    assert response.status_code == 401
