@@ -139,9 +139,9 @@ export default function Home() {
             <Link href="/contact" className="btn-primary">
               Contact Us
             </Link>
-            <a href="../index.html" className="btn-secondary">
-              View Enterprise Gallery
-            </a>
+            <Link href="/explore" className="btn-secondary">
+              Explore Our Data
+            </Link>
           </div>
         </div>
       </section>

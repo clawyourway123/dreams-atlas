@@ -26,16 +26,16 @@ export default function Navbar() {
               DREAMS <span className="text-teal-400">Atlas</span>
             </span>
           </Link>
-          {/* Cross-nav link to vanilla gallery */}
-          <a
-            href="../index.html"
+          {/* Cross-nav link to enterprise demos */}
+          <Link
+            href="/explore"
             className="hidden text-xs font-medium text-navy-400 transition-colors hover:text-teal-400 sm:inline-flex items-center gap-1"
           >
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
             </svg>
-            Enterprise Gallery
-          </a>
+            Explore Data
+          </Link>
         </div>
 
         {/* Desktop nav */}
@@ -74,13 +74,13 @@ export default function Navbar() {
       {mobileOpen && (
         <div className="border-t border-white/5 bg-navy-950/95 backdrop-blur-lg md:hidden">
           <div className="space-y-1 px-4 py-4">
-            <a
-              href="../index.html"
+            <Link
+              href="/explore"
               className="block rounded-lg px-3 py-2 text-sm font-medium text-teal-400 hover:bg-white/5"
               onClick={() => setMobileOpen(false)}
             >
-              Enterprise Gallery
-            </a>
+              Explore Data
+            </Link>
             {navigation.map((item) => (
               <Link
                 key={item.name}
