@@ -20,6 +20,7 @@ import logging.handlers
 import math
 import os
 import re
+import shutil
 import time
 import uuid
 from collections import deque, OrderedDict
@@ -34,7 +35,12 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
+from backend.atlas_schema import validate_atlas_data as validate_atlas_entries
+from backend.cache import check_redis_health, init_cache_and_limiter
 from backend.vault_manager import VaultManager
+
+# Startup timestamp for uptime reporting in /healthz
+_app_start_time = time.monotonic()
 
 # ---------------------------------------------------------------------------
 # Logging & Event Tracking (structured JSON)
@@ -193,75 +199,14 @@ def load_predict_model() -> None:
 
 
 # ---------------------------------------------------------------------------
-# LRU Cache for search results
+# Cache & Rate Limiter (initialized async in lifespan via backend.cache)
 # ---------------------------------------------------------------------------
-class LRUCache:
-    """Simple thread-safe-ish LRU cache (fine for single-worker uvicorn)."""
-
-    def __init__(self, capacity: int = 256):
-        self._cache: OrderedDict[str, list] = OrderedDict()
-        self._capacity = capacity
-
-    def get(self, key: str):
-        if key in self._cache:
-            self._cache.move_to_end(key)
-            return self._cache[key]
-        return None
-
-    def put(self, key: str, value: list):
-        if key in self._cache:
-            self._cache.move_to_end(key)
-        else:
-            if len(self._cache) >= self._capacity:
-                self._cache.popitem(last=False)
-        self._cache[key] = value
+search_cache = None  # Set in lifespan → init_cache_and_limiter()
+_redis_client = None  # Exposed for /healthz
 
 
-search_cache = LRUCache(capacity=512)
-
-
-# ---------------------------------------------------------------------------
-# Rate Limiter (in-memory, per-IP) — enhanced with remaining/reset tracking
-# ---------------------------------------------------------------------------
-class RateLimiter:
-    """Sliding-window rate limiter per IP address with header support."""
-
-    def __init__(self, max_requests: int = 60, window_seconds: int = 60):
-        self.max_requests = max_requests
-        self.window = window_seconds
-        self._hits: dict[str, list[float]] = {}
-
-    def check(self, ip: str) -> tuple[bool, int, int]:
-        """Check rate limit and return (allowed, remaining, reset_epoch).
-
-        *reset_epoch* is the Unix timestamp when the oldest hit in the current
-        window expires (i.e., when one slot frees up).
-        """
-        now = time.time()
-        cutoff = now - self.window
-        hits = [t for t in self._hits.get(ip, []) if t > cutoff]
-
-        if len(hits) >= self.max_requests:
-            self._hits[ip] = hits
-            reset_at = int(math.ceil(hits[0] + self.window))
-            return False, 0, reset_at
-
-        hits.append(now)
-        self._hits[ip] = hits
-        remaining = self.max_requests - len(hits)
-        reset_at = int(math.ceil(hits[0] + self.window)) if hits else int(now + self.window)
-        return True, remaining, reset_at
-
-    def is_allowed(self, ip: str) -> bool:
-        allowed, _, _ = self.check(ip)
-        return allowed
-
-
-# Global rate limiter: 60 req/min for general API endpoints
-rate_limiter = RateLimiter(max_requests=60, window_seconds=60)
-
-# Tighter rate limiter for /api/track: 10 req/min per IP
-track_rate_limiter = RateLimiter(max_requests=10, window_seconds=60)
+rate_limiter = None  # Set in lifespan → init_cache_and_limiter()
+track_rate_limiter = None  # Set in lifespan (track-specific limiter)
 
 
 # ---------------------------------------------------------------------------
@@ -433,7 +378,10 @@ def load_data(retries=3):
         logger.info(f"Loading data (attempt {attempt + 1}/{retries})...")
         try:
             embeddings_path = PROJECT_ROOT / "embeddings_checkpoint.npy"
-            atlas_path = PROJECT_ROOT / "atlas_data.json"
+            # Prefer real spectral embeddings over legacy synthetic data
+            atlas_real_path = PROJECT_ROOT / "atlas_data_real.json"
+            atlas_legacy_path = PROJECT_ROOT / "atlas_data.json"
+            atlas_path = atlas_real_path if atlas_real_path.exists() else atlas_legacy_path
 
             id_map.clear()
             reverse_map.clear()
@@ -443,13 +391,19 @@ def load_data(retries=3):
             if atlas_path.exists():
                 with open(atlas_path, "r") as f:
                     atlas_json = json.load(f)
+                # Validate atlas data schema (rejects NaN/Inf)
+                try:
+                    validate_atlas_entries(atlas_json)
+                except ValueError as ve:
+                    logger.error("Atlas validation failed: %s", ve)
+                    raise
                 for i, item in enumerate(atlas_json):
                     str_id = item.get("id", f"ID_{i}")
                     id_map[i] = str_id
                     reverse_map[str_id] = i
                 n_items = len(atlas_json)
                 atlas_metadata = atlas_json
-                logger.info(f"Loaded {len(id_map)} ID mappings")
+                logger.info(f"Loaded {len(id_map)} ID mappings from {atlas_path.name}")
 
             if embeddings_path.exists():
                 vectors = np.load(str(embeddings_path)).astype("float32")
@@ -502,9 +456,17 @@ def load_data(retries=3):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global search_cache, rate_limiter, track_rate_limiter, _redis_client
     load_api_keys()
     load_data()
     load_predict_model()
+    search_cache, rate_limiter, _redis_client = await init_cache_and_limiter(
+        cache_capacity=512, cache_ttl=3600, rate_max=60, rate_window=60,
+    )
+    # Separate track limiter: 10 req/min (reuses Redis if available)
+    _, track_rate_limiter, _ = await init_cache_and_limiter(
+        cache_capacity=1, cache_ttl=60, rate_max=10, rate_window=60,
+    )
     yield
 
 
@@ -642,15 +604,15 @@ async def api_key_middleware(request: Request, call_next):
 # ---------------------------------------------------------------------------
 # Helper: apply rate limit check and store headers on request.state
 # ---------------------------------------------------------------------------
-def _apply_rate_limit(request: Request, limiter: RateLimiter) -> None:
+async def _apply_rate_limit(request: Request, limiter) -> None:
     """Check rate limit for request IP. Raises 429 if exceeded.
     Stores limit/remaining/reset on request.state for header middleware.
     """
     client_ip = request.client.host if request.client else "unknown"
-    allowed, remaining, reset_at = limiter.check(client_ip)
+    allowed = await limiter.is_allowed(client_ip)
     request.state.ratelimit_limit = limiter.max_requests
-    request.state.ratelimit_remaining = remaining
-    request.state.ratelimit_reset = reset_at
+    request.state.ratelimit_remaining = 0 if not allowed else -1
+    request.state.ratelimit_reset = 0
     if not allowed:
         raise HTTPException(status_code=429, detail="Rate limit exceeded")
 
@@ -1098,6 +1060,29 @@ def cluster_insights(cluster_id: int):
 
 
 # ---------------------------------------------------------------------------
+# Atlas Points (real spectral embeddings for 3D viewer)
+# ---------------------------------------------------------------------------
+
+
+@api_router.get("/atlas/points")
+def atlas_points():
+    """Return 3D atlas points for the viewer — real UMAP embeddings."""
+    if not atlas_metadata:
+        raise HTTPException(status_code=503, detail="Atlas data not loaded")
+    return atlas_metadata
+
+
+@api_router.get("/atlas/manifest")
+def atlas_manifest():
+    """Return embedding manifest with checksums and dataset metadata."""
+    manifest_path = PROJECT_ROOT / "embedding_manifest.json"
+    if not manifest_path.exists():
+        raise HTTPException(status_code=404, detail="Manifest not found")
+    with open(manifest_path) as f:
+        return json.load(f)
+
+
+# ---------------------------------------------------------------------------
 # Mount API router at both /api (unversioned alias) and /v1/api (canonical)
 # ---------------------------------------------------------------------------
 app.include_router(api_router, prefix="/api")
@@ -1109,7 +1094,41 @@ app.include_router(api_router, prefix="/v1/api")
 # ---------------------------------------------------------------------------
 @app.get("/healthz")
 def healthz():
-    return {"status": "alive", "vectors": len(id_map), "faiss": index is not None}
+    # FAISS / vector checks
+    faiss_ok = index is not None
+    vector_count = len(id_map)
+
+    # Redis connectivity (best-effort; skip if REDIS_URL not configured)
+    redis_connected = None
+    redis_url = os.getenv("REDIS_URL")
+    if redis_url:
+        try:
+            import redis as _redis
+            r = _redis.from_url(redis_url, socket_connect_timeout=2)
+            r.ping()
+            redis_connected = True
+        except Exception:
+            redis_connected = False
+
+    # Disk free space
+    disk = shutil.disk_usage("/")
+    disk_free_mb = round(disk.free / (1024 * 1024))
+
+    # Uptime
+    uptime_seconds = round(time.monotonic() - _app_start_time)
+
+    # Overall status: healthy if vectors loaded and disk not critically low
+    healthy = vector_count > 0 and disk_free_mb > 100
+    status = "healthy" if healthy else "degraded"
+
+    return {
+        "status": status,
+        "vectors": vector_count,
+        "faiss": faiss_ok,
+        "redis_connected": redis_connected,
+        "disk_free_mb": disk_free_mb,
+        "uptime_seconds": uptime_seconds,
+    }
 
 
 # ---------------------------------------------------------------------------
