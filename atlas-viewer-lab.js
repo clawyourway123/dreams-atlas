@@ -459,13 +459,13 @@ function toggleCompareMode() {
         compareMode = true;
         comparisonAnchor = labAtlasData[labIdToIdx.get(labCurrentSelectedId)];
         const btn = document.getElementById('compareBtn');
-        if (btn) { btn.textContent = "Cancel Compare"; btn.style.background = "#e1000f"; }
+        if (btn) { btn.textContent = "Cancel Compare"; btn.className = "btn"; }
         alert("Comparison mode active. Click another molecule to compare.");
     } else {
         compareMode = false;
         comparisonAnchor = null;
         const btn = document.getElementById('compareBtn');
-        if (btn) { btn.textContent = "Compare"; btn.style.background = ""; }
+        if (btn) { btn.textContent = "Compare"; btn.className = "btn-secondary"; }
     }
 }
 

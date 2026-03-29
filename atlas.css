@@ -163,6 +163,17 @@ h2 {
     transform: translateY(-2px);
 }
 
+.btn-secondary:active {
+    transform: translateY(0);
+    border-color: var(--accent);
+}
+
+.btn-sm {
+    padding: 6px 10px;
+    margin-top: 5px;
+    font-size: 10px;
+}
+
 .btn-ghost {
     width: 100%;
     padding: 14px;
@@ -398,6 +409,43 @@ select:hover, select:focus {
     opacity: 1;
     visibility: visible;
     transform: translateX(-50%) translateY(-5px);
+}
+
+/* Tooltip edge-aware positioning */
+.tooltip.tooltip-right::after {
+    left: 0;
+    transform: translateX(0);
+}
+.tooltip.tooltip-right:hover::after {
+    transform: translateX(0) translateY(-5px);
+}
+.tooltip.tooltip-left::after {
+    left: auto;
+    right: 0;
+    transform: translateX(0);
+}
+.tooltip.tooltip-left:hover::after {
+    transform: translateX(0) translateY(-5px);
+}
+
+/* Mobile: tooltips reflow to full-width bottom sheet style */
+@media (max-width: 768px) {
+    .tooltip::after {
+        position: fixed;
+        bottom: 0;
+        left: 0 !important;
+        right: 0 !important;
+        top: auto;
+        transform: none !important;
+        width: 100%;
+        max-width: 100%;
+        border-radius: 12px 12px 0 0;
+        text-align: center;
+        z-index: 1100;
+    }
+    .tooltip:hover::after {
+        transform: none !important;
+    }
 }
 
 /* Mobile */
