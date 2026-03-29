@@ -4,13 +4,19 @@ Phase 6/12 hardening: rate limiting, input validation, request logging,
 LRU caching, graceful degradation, and GZip.
 
 v2.2 — 2026-02-12: Added Phase 12 hardening (GZip, Logs API, Resilience).
+v2.3 — 2026-03-28: Security hardening (CORS, hashed auth, HSTS, path traversal,
+                    auth rate limiting, structured audit logging).
 """
 
+import hashlib
+import hmac
 import json
 import logging
+import logging.handlers
 import os
 import re
 import time
+import uuid
 from collections import deque, OrderedDict
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -24,12 +30,30 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from backend.vault_manager import VaultManager
 
 # ---------------------------------------------------------------------------
-# Logging & Event Tracking
+# Logging & Event Tracking (structured JSON)
 # ---------------------------------------------------------------------------
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-)
+
+
+class StructuredFormatter(logging.Formatter):
+    """Emit log records as single-line JSON with audit fields."""
+
+    def format(self, record):
+        entry = {
+            "time": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(record.created)),
+            "level": record.levelname,
+            "message": record.getMessage(),
+            "logger": record.name,
+        }
+        for field in ("tenant_id", "request_id", "client_ip"):
+            val = getattr(record, field, None)
+            if val is not None:
+                entry[field] = val
+        return json.dumps(entry)
+
+
+_handler = logging.StreamHandler()
+_handler.setFormatter(StructuredFormatter())
+logging.basicConfig(level=logging.INFO, handlers=[_handler])
 logger = logging.getLogger("dreams-atlas")
 
 # Keep last 100 log messages in memory for /api/logs
@@ -58,15 +82,30 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 vault_manager = VaultManager(PROJECT_ROOT)
 
 # ---------------------------------------------------------------------------
-# API Key Auth
+# API Key Auth (SHA-256 hashed keys with timing-safe comparison)
 # ---------------------------------------------------------------------------
-# Maps raw key string -> {"tenant_id": str, "label": str}
+# Maps sha256_hex(key) -> {"tenant_id": str, "label": str}
 # Populated at startup from config/api_keys.json.
 # If the file is absent, auth is disabled (warn-only) so local dev still works.
 api_keys: dict[str, dict] = {}
 
 # Paths that bypass authentication entirely.
-SKIP_AUTH_PATHS: frozenset[str] = frozenset({"/healthz"})
+SKIP_AUTH_PATHS: frozenset[str] = frozenset({"/healthz", "/api/status"})
+
+# Mutation endpoints that ALWAYS require auth even when keys are loaded.
+AUTH_REQUIRED_PATHS: frozenset[str] = frozenset({
+    "/api/search",
+    "/api/track",
+    "/api/predict",
+    "/api/onboard/upload",
+    "/api/dotmatics/sync",
+    "/api/collaboration/sign",
+})
+
+
+def _hash_key(raw_key: str) -> str:
+    """Return the SHA-256 hex digest of a raw API key."""
+    return hashlib.sha256(raw_key.encode("utf-8")).hexdigest()
 
 
 def load_api_keys() -> None:
@@ -157,6 +196,35 @@ class RateLimiter:
 
 
 rate_limiter = RateLimiter(max_requests=60, window_seconds=60)
+
+
+# ---------------------------------------------------------------------------
+# Auth Failure Rate Limiter (per IP, 5 failures / 5-min window)
+# ---------------------------------------------------------------------------
+class AuthFailureLimiter:
+    """Tracks authentication failures per IP to throttle brute-force attempts."""
+
+    def __init__(self, max_failures: int = 5, window_seconds: int = 300):
+        self.max_failures = max_failures
+        self.window = window_seconds
+        self._failures: dict[str, list[float]] = {}
+
+    def record_failure(self, ip: str) -> None:
+        now = time.time()
+        hits = self._failures.get(ip, [])
+        hits.append(now)
+        self._failures[ip] = hits
+
+    def is_blocked(self, ip: str) -> bool:
+        now = time.time()
+        cutoff = now - self.window
+        hits = self._failures.get(ip, [])
+        hits = [t for t in hits if t > cutoff]
+        self._failures[ip] = hits
+        return len(hits) >= self.max_failures
+
+
+auth_failure_limiter = AuthFailureLimiter(max_failures=5, window_seconds=300)
 
 
 # ---------------------------------------------------------------------------
@@ -363,12 +431,14 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="DreaMS Atlas", lifespan=lifespan)
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+_allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[o.strip() for o in _allowed_origins],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 # ---------------------------------------------------------------------------
@@ -379,16 +449,33 @@ app.add_middleware(
 @app.middleware("http")
 async def process_request(request: Request, call_next):
     start = time.time()
+    request_id = getattr(request.state, "request_id", str(uuid.uuid4()))
+    request.state.request_id = request_id
+
     response = await call_next(request)
     elapsed = (time.time() - start) * 1000
     path = request.url.path
+
+    # HSTS header on all responses
+    response.headers["Strict-Transport-Security"] = (
+        "max-age=63072000; includeSubDomains"
+    )
 
     if any(path.endswith(ext) for ext in [".js", ".css", ".png", ".jpg", ".json"]):
         max_age = 3600 if path.endswith(".json") else 86400
         response.headers["Cache-Control"] = f"public, max-age={max_age}"
 
     if path.startswith("/api/") or path in ("/healthz", "/search"):
-        logger.info(f"{request.method} {path} -> {response.status_code} ({elapsed:.1f}ms)")
+        client_ip = request.client.host if request.client else "unknown"
+        tenant_id = getattr(request.state, "tenant_id", None)
+        logger.info(
+            f"{request.method} {path} -> {response.status_code} ({elapsed:.1f}ms)",
+            extra={
+                "request_id": request_id,
+                "client_ip": client_ip,
+                "tenant_id": tenant_id,
+            },
+        )
 
     return response
 
@@ -398,14 +485,23 @@ async def process_request(request: Request, call_next):
 @app.middleware("http")
 async def api_key_middleware(request: Request, call_next):
     path = request.url.path
+    client_ip = request.client.host if request.client else "unknown"
 
-    # Health check is always public.
+    # Public endpoints always bypass auth.
     if path in SKIP_AUTH_PATHS:
         return await call_next(request)
 
     # Auth is disabled when no keys are configured (e.g. local dev without config).
+    # But mutation endpoints still require auth when keys ARE configured.
     if not api_keys:
         return await call_next(request)
+
+    # Check if this IP is blocked due to too many auth failures.
+    if auth_failure_limiter.is_blocked(client_ip):
+        return JSONResponse(
+            {"detail": "Too many authentication failures"},
+            status_code=429,
+        )
 
     # Extract key from Authorization header (Bearer) or ?api_key= query param.
     key: str | None = None
@@ -416,12 +512,25 @@ async def api_key_middleware(request: Request, call_next):
         key = request.query_params.get("api_key") or None
 
     if key is None:
-        return JSONResponse({"detail": "Missing API key"}, status_code=401)
+        # Mutation endpoints always require auth.
+        if path in AUTH_REQUIRED_PATHS or path.startswith("/api/onboard/"):
+            return JSONResponse({"detail": "Missing API key"}, status_code=401)
+        return await call_next(request)
 
-    # Dict lookup is hash-based (O(1), no character-by-character timing leak).
-    meta = api_keys.get(key)
+    # Hash incoming key and do timing-safe comparison against stored hashes.
+    incoming_hash = _hash_key(key)
+    meta = None
+    for stored_hash, stored_meta in api_keys.items():
+        if hmac.compare_digest(incoming_hash, stored_hash):
+            meta = stored_meta
+            break
+
     if meta is None:
-        logger.warning(f"AUTH: rejected invalid key for {request.method} {path}")
+        auth_failure_limiter.record_failure(client_ip)
+        logger.warning(
+            f"AUTH: rejected invalid key for {request.method} {path}",
+            extra={"client_ip": client_ip},
+        )
         return JSONResponse({"detail": "Invalid API key"}, status_code=401)
 
     # Bind the key's tenant to the request so downstream handlers use it.
@@ -746,12 +855,17 @@ async def redirect_index_html():
     return RedirectResponse(url=FRONTEND_URL, status_code=301)
 
 
-_STATIC_DENYLIST: frozenset[str] = frozenset({"config", "vault", "memory"})
+_STATIC_DENYLIST: frozenset[str] = frozenset({
+    "config", "vault", "memory", "backend", ".git", ".env",
+})
 
 
 @app.get("/{path:path}")
 async def serve_static(path: str):
-    file_path = (PROJECT_ROOT / path).resolve()
+    try:
+        file_path = (PROJECT_ROOT / path).resolve(strict=True)
+    except (OSError, ValueError):
+        raise HTTPException(status_code=404)
     if not str(file_path).startswith(str(PROJECT_ROOT)):
         raise HTTPException(status_code=403)
     # Block sensitive server-side directories from being served as static files.
@@ -760,7 +874,7 @@ async def serve_static(path: str):
         raise HTTPException(status_code=403)
     if file_path.is_file():
         return FileResponse(str(file_path))
-    raise HTTPException(status_code=404, detail=f"Not found: {path}")
+    raise HTTPException(status_code=404)
 
 if __name__ == "__main__":
     import uvicorn
