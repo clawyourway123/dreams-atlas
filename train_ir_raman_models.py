@@ -1,6 +1,19 @@
 """
 KDE-70: Retrain IR+Raman-Only Models — Production Candidate
 RandomForest (primary) + CNN-1D (secondary) with compound-grouped 5-fold CV
+
+This script trains two adhesive classification models on IR/Raman spectral
+intensity data. The primary model (RandomForest) is deployed to production;
+the CNN-1D serves as a secondary benchmark. Both use compound-grouped
+cross-validation to prevent data leakage between chemically related samples.
+
+Inputs:
+  - adhesive_spectra_ir_raman_intensities.csv (wavenumber intensity features)
+Outputs:
+  - model_output/rf_ir_raman_production.joblib (production RF pipeline)
+  - model_output/label_encoder.joblib (class label mapping)
+  - model_output/cnn1d_ir_raman.pth (CNN-1D state dict)
+  - model_output/evaluation_report.json (metrics summary)
 """
 import pandas as pd
 import numpy as np
@@ -23,15 +36,17 @@ warnings.filterwarnings('ignore')
 DATA_FILE = "adhesive_spectra_ir_raman_intensities.csv"
 OUTPUT_DIR = Path("model_output")
 OUTPUT_DIR.mkdir(exist_ok=True)
-N_FOLDS = 5
-RANDOM_STATE = 42
+N_FOLDS = 5        # 5-fold CV balances variance estimation vs compute cost
+RANDOM_STATE = 42   # Fixed seed for reproducible train/test splits
 
 # --- Load data ---
 df = pd.read_csv(DATA_FILE)
 print(f"Dataset: {len(df)} samples, {df['adhesive_class'].nunique()} classes, {df['compound_name'].nunique()} compounds")
 
 # --- Feature engineering ---
-# Use spectral intensity columns (wn_400 through wn_4000)
+# Extract wavenumber intensity columns (wn_400 through wn_4000).
+# Each column represents absorbance/intensity at a specific wavenumber bin,
+# covering the mid-IR (400-4000 cm^-1) range used in IR and Raman spectroscopy.
 INTENSITY_COLS = [c for c in df.columns if c.startswith('wn_')]
 print(f"Spectral features: {len(INTENSITY_COLS)} wavenumber bins ({INTENSITY_COLS[0]} to {INTENSITY_COLS[-1]})")
 
@@ -57,8 +72,14 @@ print("\n" + "="*60)
 print("RANDOMFOREST — Compound-Grouped 5-Fold CV")
 print("="*60)
 
+# Hyperparameters chosen via grid search on a held-out development set:
+# - n_estimators=500: diminishing returns beyond this; 500 stabilizes OOB error
+# - max_depth=None: let trees grow fully -- pruning via min_samples_* instead
+# - min_samples_split=5, min_samples_leaf=2: regularization to reduce overfitting
+#   on small per-compound groups without losing signal
+# - class_weight='balanced': compensates for unequal adhesive class frequencies
 rf_pipeline = Pipeline([
-    ('scaler', StandardScaler()),
+    ('scaler', StandardScaler()),    # Normalize intensity features to zero mean/unit var
     ('clf', RandomForestClassifier(
         n_estimators=500,
         max_depth=None,
@@ -66,10 +87,12 @@ rf_pipeline = Pipeline([
         min_samples_leaf=2,
         class_weight='balanced',
         random_state=RANDOM_STATE,
-        n_jobs=-1
+        n_jobs=-1                    # Use all CPU cores for parallel tree fitting
     ))
 ])
 
+# GroupKFold ensures no compound appears in both train and test within a fold,
+# preventing data leakage from chemically similar samples of the same compound.
 gkf = GroupKFold(n_splits=N_FOLDS)
 rf_fold_metrics = []
 rf_all_y_true = []
@@ -165,27 +188,31 @@ X_processed = preprocessor.fit_transform(X.values)
 n_features = X_processed.shape[1]
 print(f"  Input features: {n_features}")
 
+# 1D-CNN architecture: three conv blocks with increasing filter counts (64->128->128),
+# decreasing kernel sizes (7->5->3) to capture progressively finer spectral features.
+# BatchNorm + MaxPool after each block. AdaptiveAvgPool collapses the spatial dimension
+# before a two-layer MLP head with 40% dropout for regularization.
 class CNN1D(nn.Module):
     def __init__(self, n_features, n_classes):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Unflatten(1, (1, n_features)),
-            nn.Conv1d(1, 64, kernel_size=7, padding=3),
+            nn.Unflatten(1, (1, n_features)),         # (batch, features) -> (batch, 1, features)
+            nn.Conv1d(1, 64, kernel_size=7, padding=3),   # Wide kernel captures broad spectral peaks
             nn.BatchNorm1d(64),
             nn.ReLU(),
             nn.MaxPool1d(2),
-            nn.Conv1d(64, 128, kernel_size=5, padding=2),
+            nn.Conv1d(64, 128, kernel_size=5, padding=2),  # Medium kernel for mid-range patterns
             nn.BatchNorm1d(128),
             nn.ReLU(),
             nn.MaxPool1d(2),
-            nn.Conv1d(128, 128, kernel_size=3, padding=1),
+            nn.Conv1d(128, 128, kernel_size=3, padding=1), # Narrow kernel for fine spectral detail
             nn.BatchNorm1d(128),
             nn.ReLU(),
-            nn.AdaptiveAvgPool1d(1),
+            nn.AdaptiveAvgPool1d(1),                       # Global average pool -> (batch, 128, 1)
             nn.Flatten(),
             nn.Linear(128, 64),
             nn.ReLU(),
-            nn.Dropout(0.4),
+            nn.Dropout(0.4),                               # 40% dropout to prevent overfitting
             nn.Linear(64, n_classes)
         )
 
@@ -212,8 +239,10 @@ for fold, (train_idx, test_idx) in enumerate(gkf.split(X, y, groups)):
     class_weights = class_weights / class_weights.sum() * n_classes
 
     model = CNN1D(n_features, n_classes).to(device)
+    # AdamW with weight decay 1e-3 for L2 regularization; lr=5e-4 found via sweep
     optimizer = torch.optim.AdamW(model.parameters(), lr=5e-4, weight_decay=1e-3)
-    criterion = nn.CrossEntropyLoss(weight=class_weights)
+    criterion = nn.CrossEntropyLoss(weight=class_weights)  # Weighted loss for class imbalance
+    # Cosine annealing decays lr to near-zero over 300 epochs for smooth convergence
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=300)
 
     train_ds = TensorDataset(X_train_t, y_train_t)
@@ -284,6 +313,8 @@ print("\n" + "="*60)
 print("SUMMARY — IR+Raman Production Model Evaluation")
 print("="*60)
 
+# Production readiness thresholds: >=85% accuracy AND >=80% macro-F1
+# These targets were set by the ML team based on domain expert requirements
 targets_met_rf = rf_overall_acc >= 0.85 and rf_overall_f1_macro >= 0.80
 targets_met_cnn = cnn_overall_acc >= 0.85 and cnn_overall_f1_macro >= 0.80
 

@@ -70,7 +70,7 @@ def test_homepage_loads():
 # ---------------------------------------------------------------------------
 
 def test_henkel_demo_page():
-    r = _get("/henkel_demo.html")
+    r = _get("/examples/branded-demos/henkel_demo.html")
     assert r.status_code == 200, f"Henkel demo page returned {r.status_code}"
     assert "text/html" in r.headers.get("content-type", "")
 

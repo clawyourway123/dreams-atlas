@@ -45,7 +45,7 @@ Confirm a `.csv` file downloads with `id` and `rank` columns.
 Navigate to:
 
 ```
-https://dreams-atlas.onrender.com/henkel_demo.html
+https://dreams-atlas.onrender.com/examples/branded-demos/henkel_demo.html
 ```
 
 Confirm the Henkel-branded atlas loads and the sidebar shows compound details.

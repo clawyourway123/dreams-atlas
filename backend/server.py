@@ -6,13 +6,18 @@ LRU caching, graceful degradation, and GZip.
 v2.2 — 2026-02-12: Added Phase 12 hardening (GZip, Logs API, Resilience).
 v2.3 — 2026-03-28: Security hardening (CORS, hashed auth, HSTS, path traversal,
                     auth rate limiting, structured audit logging).
+v2.4 — 2026-03-28: API completeness (versioning, rate limit headers, predict,
+                    export formats, track validation, modality filter).
 """
 
+import csv
 import hashlib
 import hmac
+import io
 import json
 import logging
 import logging.handlers
+import math
 import os
 import re
 import time
@@ -20,12 +25,14 @@ import uuid
 from collections import deque, OrderedDict
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Optional
 
 import numpy as np
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import APIRouter, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, StreamingResponse
+from pydantic import BaseModel, Field
 
 from backend.vault_manager import VaultManager
 
@@ -92,7 +99,7 @@ api_keys: dict[str, dict] = {}
 # Paths that bypass authentication entirely.
 SKIP_AUTH_PATHS: frozenset[str] = frozenset({"/healthz", "/api/status"})
 
-# Mutation endpoints that ALWAYS require auth even when keys are loaded.
+# Mutation endpoints that ALWAYS require auth when keys are loaded.
 AUTH_REQUIRED_PATHS: frozenset[str] = frozenset({
     "/api/search",
     "/api/track",
@@ -101,6 +108,11 @@ AUTH_REQUIRED_PATHS: frozenset[str] = frozenset({
     "/api/dotmatics/sync",
     "/api/collaboration/sign",
 })
+
+# Same set but under the /v1 prefix — built dynamically.
+AUTH_REQUIRED_V1_PATHS: frozenset[str] = frozenset(
+    f"/v1{p}" for p in AUTH_REQUIRED_PATHS
+)
 
 
 def _hash_key(raw_key: str) -> str:
@@ -130,6 +142,9 @@ id_map: dict[int, str] = {}
 reverse_map: dict[str, int] = {}
 faiss_available = False
 
+# Atlas metadata — populated at startup from atlas_data.json
+atlas_metadata: list[dict] = []
+
 # Cluster analysis — populated once at startup in load_data()
 cluster_assignments: np.ndarray | None = None  # shape (n,), dtype int
 cluster_stats: dict[int, dict] = {}  # cluster_id -> stats dict
@@ -140,6 +155,41 @@ try:
 except Exception:
     faiss = None  # type: ignore[assignment]
     logger.warning("faiss-cpu not available — search will use numpy fallback")
+
+# ---------------------------------------------------------------------------
+# ML Model for /api/predict (optional — graceful if missing)
+# ---------------------------------------------------------------------------
+predict_model = None
+predict_label_encoder = None
+predict_available = False
+
+try:
+    import joblib
+    _joblib_available = True
+except ImportError:
+    joblib = None  # type: ignore[assignment]
+    _joblib_available = False
+    logger.warning("joblib not available — /api/predict will be disabled")
+
+
+def load_predict_model() -> None:
+    global predict_model, predict_label_encoder, predict_available
+    if not _joblib_available:
+        return
+    model_path = PROJECT_ROOT / "model_output" / "rf_ir_raman_production.joblib"
+    encoder_path = PROJECT_ROOT / "model_output" / "label_encoder.joblib"
+    if not model_path.exists() or not encoder_path.exists():
+        logger.warning("Prediction model files not found — /api/predict disabled")
+        return
+    try:
+        predict_model = joblib.load(model_path)
+        predict_label_encoder = joblib.load(encoder_path)
+        predict_available = True
+        logger.info(
+            f"Prediction model loaded: {len(predict_label_encoder.classes_)} classes"
+        )
+    except Exception as e:
+        logger.error(f"Failed to load prediction model: {e}")
 
 
 # ---------------------------------------------------------------------------
@@ -171,31 +221,47 @@ search_cache = LRUCache(capacity=512)
 
 
 # ---------------------------------------------------------------------------
-# Rate Limiter (in-memory, per-IP)
+# Rate Limiter (in-memory, per-IP) — enhanced with remaining/reset tracking
 # ---------------------------------------------------------------------------
 class RateLimiter:
-    """Sliding-window rate limiter per IP address."""
+    """Sliding-window rate limiter per IP address with header support."""
 
     def __init__(self, max_requests: int = 60, window_seconds: int = 60):
         self.max_requests = max_requests
         self.window = window_seconds
         self._hits: dict[str, list[float]] = {}
 
-    def is_allowed(self, ip: str) -> bool:
+    def check(self, ip: str) -> tuple[bool, int, int]:
+        """Check rate limit and return (allowed, remaining, reset_epoch).
+
+        *reset_epoch* is the Unix timestamp when the oldest hit in the current
+        window expires (i.e., when one slot frees up).
+        """
         now = time.time()
         cutoff = now - self.window
-        hits = self._hits.get(ip, [])
-        # Prune old entries
-        hits = [t for t in hits if t > cutoff]
+        hits = [t for t in self._hits.get(ip, []) if t > cutoff]
+
         if len(hits) >= self.max_requests:
             self._hits[ip] = hits
-            return False
+            reset_at = int(math.ceil(hits[0] + self.window))
+            return False, 0, reset_at
+
         hits.append(now)
         self._hits[ip] = hits
-        return True
+        remaining = self.max_requests - len(hits)
+        reset_at = int(math.ceil(hits[0] + self.window)) if hits else int(now + self.window)
+        return True, remaining, reset_at
+
+    def is_allowed(self, ip: str) -> bool:
+        allowed, _, _ = self.check(ip)
+        return allowed
 
 
+# Global rate limiter: 60 req/min for general API endpoints
 rate_limiter = RateLimiter(max_requests=60, window_seconds=60)
+
+# Tighter rate limiter for /api/track: 10 req/min per IP
+track_rate_limiter = RateLimiter(max_requests=10, window_seconds=60)
 
 
 # ---------------------------------------------------------------------------
@@ -225,6 +291,18 @@ class AuthFailureLimiter:
 
 
 auth_failure_limiter = AuthFailureLimiter(max_failures=5, window_seconds=300)
+
+
+# ---------------------------------------------------------------------------
+# Pydantic models for request validation
+# ---------------------------------------------------------------------------
+class TrackEvent(BaseModel):
+    event: str = Field(..., max_length=64)
+    meta: Optional[dict] = Field(default=None)
+
+
+class PredictRequest(BaseModel):
+    spectrum: list[float] = Field(..., min_length=1, max_length=10000)
 
 
 # ---------------------------------------------------------------------------
@@ -349,7 +427,7 @@ def numpy_search(
 # Data Loading
 # ---------------------------------------------------------------------------
 def load_data(retries=3):
-    global index, vectors, cluster_assignments, cluster_stats
+    global index, vectors, cluster_assignments, cluster_stats, atlas_metadata
 
     for attempt in range(retries):
         logger.info(f"Loading data (attempt {attempt + 1}/{retries})...")
@@ -370,6 +448,7 @@ def load_data(retries=3):
                     id_map[i] = str_id
                     reverse_map[str_id] = i
                 n_items = len(atlas_json)
+                atlas_metadata = atlas_json
                 logger.info(f"Loaded {len(id_map)} ID mappings")
 
             if embeddings_path.exists():
@@ -425,6 +504,7 @@ def load_data(retries=3):
 async def lifespan(app: FastAPI):
     load_api_keys()
     load_data()
+    load_predict_model()
     yield
 
 
@@ -442,7 +522,7 @@ app.add_middleware(
 )
 
 # ---------------------------------------------------------------------------
-# Middleware: Logging & Cache
+# Middleware: Logging, Cache, Version Header & Rate Limit Headers
 # ---------------------------------------------------------------------------
 
 
@@ -456,16 +536,31 @@ async def process_request(request: Request, call_next):
     elapsed = (time.time() - start) * 1000
     path = request.url.path
 
+    # API version header on all versioned and API responses
+    if path.startswith("/v1/") or path.startswith("/api/"):
+        response.headers["X-API-Version"] = "1"
+
     # HSTS header on all responses
     response.headers["Strict-Transport-Security"] = (
         "max-age=63072000; includeSubDomains"
     )
 
+    # Rate limit headers — populated by endpoint handlers via request.state
+    rl_limit = getattr(request.state, "ratelimit_limit", None)
+    if rl_limit is not None:
+        response.headers["X-RateLimit-Limit"] = str(rl_limit)
+        response.headers["X-RateLimit-Remaining"] = str(
+            getattr(request.state, "ratelimit_remaining", 0)
+        )
+        response.headers["X-RateLimit-Reset"] = str(
+            getattr(request.state, "ratelimit_reset", 0)
+        )
+
     if any(path.endswith(ext) for ext in [".js", ".css", ".png", ".jpg", ".json"]):
         max_age = 3600 if path.endswith(".json") else 86400
         response.headers["Cache-Control"] = f"public, max-age={max_age}"
 
-    if path.startswith("/api/") or path in ("/healthz", "/search"):
+    if path.startswith("/api/") or path.startswith("/v1/api/") or path in ("/healthz", "/search"):
         client_ip = request.client.host if request.client else "unknown"
         tenant_id = getattr(request.state, "tenant_id", None)
         logger.info(
@@ -480,14 +575,18 @@ async def process_request(request: Request, call_next):
     return response
 
 
+def _is_auth_required_path(path: str) -> bool:
+    """Check if a path requires auth, handling both /api/ and /v1/api/ prefixes."""
+    return path in AUTH_REQUIRED_PATHS or path in AUTH_REQUIRED_V1_PATHS
+
+
 # Added after process_request so Starlette registers it as the outermost
 # wrapper — meaning it runs first on every inbound request.
 @app.middleware("http")
 async def api_key_middleware(request: Request, call_next):
     path = request.url.path
-    client_ip = request.client.host if request.client else "unknown"
 
-    # Public endpoints always bypass auth.
+    # Health check is always public.
     if path in SKIP_AUTH_PATHS:
         return await call_next(request)
 
@@ -495,6 +594,8 @@ async def api_key_middleware(request: Request, call_next):
     # But mutation endpoints still require auth when keys ARE configured.
     if not api_keys:
         return await call_next(request)
+
+    client_ip = request.client.host if request.client else "unknown"
 
     # Check if this IP is blocked due to too many auth failures.
     if auth_failure_limiter.is_blocked(client_ip):
@@ -513,7 +614,7 @@ async def api_key_middleware(request: Request, call_next):
 
     if key is None:
         # Mutation endpoints always require auth.
-        if path in AUTH_REQUIRED_PATHS or path.startswith("/api/onboard/"):
+        if _is_auth_required_path(path) or path.startswith("/api/onboard/") or path.startswith("/v1/api/onboard/"):
             return JSONResponse({"detail": "Missing API key"}, status_code=401)
         return await call_next(request)
 
@@ -539,28 +640,51 @@ async def api_key_middleware(request: Request, call_next):
 
 
 # ---------------------------------------------------------------------------
-# API Endpoints
+# Helper: apply rate limit check and store headers on request.state
 # ---------------------------------------------------------------------------
-@app.get("/healthz")
-def healthz():
-    return {"status": "alive", "vectors": len(id_map), "faiss": index is not None}
+def _apply_rate_limit(request: Request, limiter: RateLimiter) -> None:
+    """Check rate limit for request IP. Raises 429 if exceeded.
+    Stores limit/remaining/reset on request.state for header middleware.
+    """
+    client_ip = request.client.host if request.client else "unknown"
+    allowed, remaining, reset_at = limiter.check(client_ip)
+    request.state.ratelimit_limit = limiter.max_requests
+    request.state.ratelimit_remaining = remaining
+    request.state.ratelimit_reset = reset_at
+    if not allowed:
+        raise HTTPException(status_code=429, detail="Rate limit exceeded")
 
 
-@app.get("/api/status")
+# ---------------------------------------------------------------------------
+# API Router — all /api/* endpoints live here, mounted at both
+# /api (unversioned alias) and /v1/api (versioned canonical).
+# ---------------------------------------------------------------------------
+api_router = APIRouter()
+
+
+@api_router.get("/status")
 def api_status():
     return {"status": "ok", "vectors": len(id_map), "cache": len(search_cache._cache)}
 
 
-@app.get("/api/logs")
+@api_router.get("/logs")
 def get_logs():
     return list(event_log)
 
 
-@app.get("/api/search")
-def api_search(request: Request, id: str, k: int = 20, tenant_id: str = "default"):
-    client_ip = request.client.host if request.client else "unknown"
-    if not rate_limiter.is_allowed(client_ip):
-        raise HTTPException(status_code=429, detail="Rate limit")
+@api_router.get("/search")
+def api_search(
+    request: Request,
+    id: str,
+    k: int = 20,
+    tenant_id: str = "default",
+    modality: Optional[str] = Query(
+        default=None,
+        description="Filter by spectral modality (IR, FTIR, Raman). "
+        "Requires modality metadata in atlas data.",
+    ),
+):
+    _apply_rate_limit(request, rate_limiter)
 
     clean_id = validate_search_id(id)
     k = max(1, min(k, 100))
@@ -569,11 +693,9 @@ def api_search(request: Request, id: str, k: int = 20, tenant_id: str = "default
     # cannot escalate to another tenant by changing ?tenant_id=.
     effective_tenant = getattr(request.state, "tenant_id", tenant_id)
 
-    # Mock data isolation: filter results based on effective_tenant
-    # In a real app, this would filter the FAISS index or lookup table.
-    logger.info(f"SEARCH [Tenant: {effective_tenant}] | ID: {clean_id} | k: {k}")
+    logger.info(f"SEARCH [Tenant: {effective_tenant}] | ID: {clean_id} | k: {k} | modality: {modality}")
 
-    cache_key = f"{effective_tenant}:{clean_id}:{k}"
+    cache_key = f"{effective_tenant}:{clean_id}:{k}:{modality or 'all'}"
     cached = search_cache.get(cache_key)
     if cached:
         return {"query": clean_id, "tenant": effective_tenant, "results": cached}
@@ -598,23 +720,41 @@ def api_search(request: Request, id: str, k: int = 20, tenant_id: str = "default
     if t_vectors is None:
         raise HTTPException(status_code=503)
 
+    # Over-fetch when modality filter is active so we can filter down to k.
+    fetch_k = k * 3 if modality else k
+
     query_vec = t_vectors[query_idx].reshape(1, -1)
     if t_index:
-        D, indices = t_index.search(query_vec, k)
+        D, indices = t_index.search(query_vec, min(fetch_k, t_vectors.shape[0]))
     else:
-        D, indices = numpy_search(query_vec, k, vecs=t_vectors)
+        D, indices = numpy_search(query_vec, min(fetch_k, t_vectors.shape[0]), vecs=t_vectors)
 
     results = []
-    for rank, idx in enumerate(indices[0]):
-        dist = float(D[0][rank])
-        results.append({"id": t_id_map.get(int(idx)),
-                       "score": round(1.0/(1.0+dist), 6), "rank": rank})
+    for rank_idx, idx in enumerate(indices[0]):
+        int_idx = int(idx)
+        result_id = t_id_map.get(int_idx)
+        dist = float(D[0][rank_idx])
+
+        # Apply modality filter if requested and metadata is available
+        if modality and atlas_metadata:
+            item_meta = atlas_metadata[int_idx] if int_idx < len(atlas_metadata) else {}
+            item_modality = item_meta.get("modality")
+            if item_modality and item_modality.upper() != modality.upper():
+                continue
+
+        results.append({
+            "id": result_id,
+            "score": round(1.0 / (1.0 + dist), 6),
+            "rank": len(results),
+        })
+        if len(results) >= k:
+            break
 
     search_cache.put(cache_key, results)
     return {"query": clean_id, "tenant": effective_tenant, "results": results}
 
 
-@app.get("/api/auth/sso/callback")
+@api_router.get("/auth/sso/callback")
 def sso_callback(token: str):
     """Mock SAML/SSO callback for enterprise authentication."""
     logger.info(f"SSO: Authenticated user with token {token[:10]}...")
@@ -627,25 +767,84 @@ def sso_callback(token: str):
     }
 
 
-@app.get("/api/export")
-def api_export(ids: str, request: Request):
-    """Export compound IDs as CSV."""
-    import csv
-    import io
-    from fastapi.responses import StreamingResponse
+@api_router.get("/export")
+def api_export(
+    request: Request,
+    ids: Optional[str] = Query(default=None, description="Comma-separated compound IDs"),
+    query: Optional[str] = Query(default=None, description="Search query ID — runs search then exports results"),
+    k: int = Query(default=20, ge=1, le=100, description="Number of results when using query param"),
+    format: str = Query(default="csv", regex="^(csv|json)$", description="Export format: csv or json"),
+):
+    """Export compound data as CSV or JSON.
 
-    client_ip = request.client.host if request.client else "unknown"
-    if not rate_limiter.is_allowed(client_ip):
-        raise HTTPException(status_code=429, detail="Rate limit")
+    Provide either `ids` (comma-separated) or `query` (search ID) — not both.
+    """
+    _apply_rate_limit(request, rate_limiter)
 
-    id_list = [i.strip() for i in ids.split(",") if i.strip()]
+    if ids and query:
+        raise HTTPException(status_code=400, detail="Provide either 'ids' or 'query', not both")
+    if not ids and not query:
+        raise HTTPException(status_code=400, detail="Provide 'ids' or 'query' parameter")
+
+    # Build the result list
+    export_rows: list[dict] = []
+
+    if query:
+        # Search-then-export: run similarity search and export results
+        clean_id = validate_search_id(query)
+        effective_tenant = getattr(request.state, "tenant_id", "default")
+
+        if effective_tenant != "default" and vault_manager.has_vault(effective_tenant):
+            t_data = vault_manager.get_tenant_data(effective_tenant)
+            t_vectors = t_data["vectors"]
+            t_id_map = t_data["id_map"]
+            t_reverse_map = t_data["reverse_map"]
+            t_index = t_data["index"]
+        else:
+            t_vectors = vectors
+            t_id_map = id_map
+            t_reverse_map = reverse_map
+            t_index = index
+
+        query_idx = t_reverse_map.get(clean_id, -1)
+        if query_idx == -1:
+            raise HTTPException(status_code=404, detail=f"Query ID not found: {clean_id}")
+        if t_vectors is None:
+            raise HTTPException(status_code=503)
+
+        query_vec = t_vectors[query_idx].reshape(1, -1)
+        if t_index:
+            D, indices_arr = t_index.search(query_vec, k)
+        else:
+            D, indices_arr = numpy_search(query_vec, k, vecs=t_vectors)
+
+        for rank, idx in enumerate(indices_arr[0]):
+            dist = float(D[0][rank])
+            export_rows.append({
+                "id": t_id_map.get(int(idx), f"ID_{idx}"),
+                "rank": rank,
+                "score": round(1.0 / (1.0 + dist), 6),
+            })
+    else:
+        # Direct ID export
+        id_list = [i.strip() for i in ids.split(",") if i.strip()]
+        for rank, compound_id in enumerate(id_list):
+            clean_id = validate_search_id(compound_id)
+            export_rows.append({"id": clean_id, "rank": rank})
+
+    # Format response
+    if format == "json":
+        return JSONResponse(
+            content={"results": export_rows},
+            headers={"Content-Disposition": "attachment; filename=export.json"},
+        )
+
+    # CSV format
     output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(["id", "rank"])
-    for rank, compound_id in enumerate(id_list):
-        clean_id = validate_search_id(compound_id)
-        writer.writerow([clean_id, rank])
-
+    if export_rows:
+        writer = csv.DictWriter(output, fieldnames=list(export_rows[0].keys()))
+        writer.writeheader()
+        writer.writerows(export_rows)
     output.seek(0)
     return StreamingResponse(
         iter([output.getvalue()]),
@@ -654,28 +853,88 @@ def api_export(ids: str, request: Request):
     )
 
 
-@app.post("/api/track")
+@api_router.post("/track")
 async def api_track(request: Request):
+    """Track analytics events with rate limiting and schema validation."""
+    _apply_rate_limit(request, track_rate_limiter)
+
     try:
         data = await request.json()
-        logger.info(f"TRACK: {data.get('event')} | {data.get('meta')}")
-        return {"status": "ok"}
     except Exception:
-        return {"status": "err"}
+        raise HTTPException(status_code=400, detail="Invalid JSON body")
+
+    # Validate with Pydantic
+    try:
+        event = TrackEvent(**data)
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=f"Validation error: {e}")
+
+    # Enforce meta size limit (1KB serialized)
+    if event.meta is not None:
+        meta_size = len(json.dumps(event.meta))
+        if meta_size > 1024:
+            raise HTTPException(
+                status_code=422,
+                detail=f"meta field exceeds 1KB limit ({meta_size} bytes)",
+            )
+
+    logger.info(f"TRACK: {event.event} | {event.meta}")
+    return {"status": "ok"}
+
+
+@api_router.post("/predict")
+async def api_predict(request: Request, body: PredictRequest):
+    """Run spectrum classification. Returns predicted class, confidence, and top-3 probabilities.
+
+    Requires authentication.
+    """
+    if not predict_available:
+        raise HTTPException(
+            status_code=503,
+            detail="Prediction model not available. Ensure model files are present in model_output/.",
+        )
+
+    spectrum = np.array(body.spectrum, dtype=np.float64).reshape(1, -1)
+
+    try:
+        probabilities = predict_model.predict_proba(spectrum)[0]
+        predicted_idx = int(np.argmax(probabilities))
+        predicted_class = predict_label_encoder.inverse_transform([predicted_idx])[0]
+        confidence = float(probabilities[predicted_idx])
+
+        # Top-3 predictions
+        top3_indices = np.argsort(-probabilities)[:3]
+        top3 = [
+            {
+                "class": str(predict_label_encoder.inverse_transform([int(i)])[0]),
+                "probability": round(float(probabilities[int(i)]), 6),
+            }
+            for i in top3_indices
+        ]
+    except Exception as e:
+        logger.error(f"Prediction failed: {e}")
+        raise HTTPException(status_code=500, detail="Prediction failed")
+
+    return {
+        "predicted_class": str(predicted_class),
+        "confidence": round(confidence, 6),
+        "top_3": top3,
+    }
+
 
 # ---------------------------------------------------------------------------
 # Phase 16: Interoperability logic
 # ---------------------------------------------------------------------------
 
 
-@app.get("/api/eln/context")
+@api_router.get("/eln/context")
 def eln_context(id: str, experiment_type: str = "similarity_review"):
     """ELN context injection — roadmap feature."""
     validate_search_id(id)
     return _coming_soon("ELN Context Injection")
 
 
-@app.get("/api/eln/export")
+@api_router.get("/eln/export")
 def eln_export(id: str, format: str = "benchling"):
     """ELN export — roadmap feature."""
     validate_search_id(id)
@@ -686,20 +945,20 @@ def eln_export(id: str, format: str = "benchling"):
 # ---------------------------------------------------------------------------
 
 
-@app.get("/api/lims/ingest")
+@api_router.get("/lims/ingest")
 def lims_ingest(smiles: str):
     """LIMS ingestion — roadmap feature."""
     return _coming_soon("LIMS SMILES-to-Spectrum Ingestion")
 
 
-@app.post("/api/dotmatics/sync")
+@api_router.post("/dotmatics/sync")
 def dotmatics_sync(id: str, payload: dict = None):
     """Dotmatics integration — roadmap feature."""
     validate_search_id(id)
     return _coming_soon("Dotmatics Sync Integration")
 
 
-@app.get("/api/molecule/smiles")
+@api_router.get("/molecule/smiles")
 def get_smiles(id: str):
     """SMILES lookup — roadmap feature."""
     validate_search_id(id)
@@ -710,14 +969,14 @@ def get_smiles(id: str):
 # ---------------------------------------------------------------------------
 
 
-@app.get("/api/safety/score")
+@api_router.get("/safety/score")
 def safety_score(id: str):
     """ADMET and safety scoring — roadmap feature."""
     validate_search_id(id)
     return _coming_soon("Predictive ADMET & Safety Scoring")
 
 
-@app.get("/api/safety/sds")
+@api_router.get("/safety/sds")
 def safety_sds(id: str):
     """Safety Data Sheet generation — roadmap feature."""
     validate_search_id(id)
@@ -728,14 +987,14 @@ def safety_sds(id: str):
 # ---------------------------------------------------------------------------
 
 
-@app.get("/api/hts/assay")
+@api_router.get("/hts/assay")
 def hts_assay(id: str):
     """HTS assay data fusion — roadmap feature."""
     validate_search_id(id)
     return _coming_soon("High-Throughput Screening Assay Data")
 
 
-@app.get("/api/hts/sar")
+@api_router.get("/hts/sar")
 def hts_sar_map(cluster_id: int = 0):
     """SAR heatmap — roadmap feature."""
     return _coming_soon("Structure-Activity Relationship Map")
@@ -745,7 +1004,7 @@ def hts_sar_map(cluster_id: int = 0):
 # ---------------------------------------------------------------------------
 
 
-@app.get("/api/sustainability/score")
+@api_router.get("/sustainability/score")
 def sustainability_score(id: str):
     """Green chemistry scoring — roadmap feature."""
     validate_search_id(id)
@@ -756,14 +1015,14 @@ def sustainability_score(id: str):
 # ---------------------------------------------------------------------------
 
 
-@app.get("/api/ip/check")
+@api_router.get("/ip/check")
 def ip_check(id: str):
     """IP/Patent FTO check — roadmap feature."""
     validate_search_id(id)
     return _coming_soon("IP & Freedom-to-Operate Check")
 
 
-@app.post("/api/collaboration/sign")
+@api_router.post("/collaboration/sign")
 async def collaboration_sign(request: Request):
     """E-signature for experimental sign-off — roadmap feature."""
     return _coming_soon("Collaborative E-Signature")
@@ -773,14 +1032,14 @@ async def collaboration_sign(request: Request):
 # ---------------------------------------------------------------------------
 
 
-@app.get("/api/molecule/properties")
+@api_router.get("/molecule/properties")
 def get_molecule_properties(id: str):
     """Molecule property overlays — roadmap feature."""
     validate_search_id(id)
     return _coming_soon("Real-World Molecule Property Mapping")
 
 
-@app.post("/api/onboard/upload")
+@api_router.post("/onboard/upload")
 async def onboard_upload(request: Request):
     """Mock Customer Onboarding: Upload .mgf for private Atlas creation."""
     # In a real app, we'd process the file and generate embeddings
@@ -793,7 +1052,7 @@ async def onboard_upload(request: Request):
     }
 
 
-@app.get("/api/validation/similarity")
+@api_router.get("/validation/similarity")
 def validation_similarity(id_a: str, id_b: str):
     """Cross-validation against experimental data — roadmap feature."""
     validate_search_id(id_a)
@@ -805,7 +1064,7 @@ def validation_similarity(id_a: str, id_b: str):
 # ---------------------------------------------------------------------------
 
 
-@app.get("/api/cluster/list")
+@api_router.get("/cluster/list")
 def cluster_list():
     """Return all clusters with their sizes."""
     if not cluster_stats:
@@ -818,7 +1077,7 @@ def cluster_list():
     }
 
 
-@app.get("/api/cluster/insights")
+@api_router.get("/cluster/insights")
 def cluster_insights(cluster_id: int):
     """Return detailed analysis for a single cluster."""
     if not cluster_stats:
@@ -836,6 +1095,21 @@ def cluster_insights(cluster_id: int):
         "nearest_cluster_distance": stats["nearest_cluster_distance"],
         "top_representative_ids": stats["top_representative_ids"],
     }
+
+
+# ---------------------------------------------------------------------------
+# Mount API router at both /api (unversioned alias) and /v1/api (canonical)
+# ---------------------------------------------------------------------------
+app.include_router(api_router, prefix="/api")
+app.include_router(api_router, prefix="/v1/api")
+
+
+# ---------------------------------------------------------------------------
+# Non-API routes (healthz, static files, root redirect)
+# ---------------------------------------------------------------------------
+@app.get("/healthz")
+def healthz():
+    return {"status": "alive", "vectors": len(id_map), "faiss": index is not None}
 
 
 # ---------------------------------------------------------------------------

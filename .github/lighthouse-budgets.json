@@ -19,7 +19,7 @@
     ]
   },
   {
-    "path": "/*_demo.html",
+    "path": "/examples/branded-demos/*_demo.html",
     "resourceSizes": [
         {
           "resourceType": "script",

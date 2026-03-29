@@ -173,19 +173,19 @@ template = """<!DOCTYPE html>
 """
 
 companies = [
-    {"name": "3M", "industry": "Materials", "count": "24,593", "file": "3m_demo.html"},
-    {"name": "BASF", "industry": "Chemicals", "count": "18,201", "file": "basf_demo.html"},
-    {"name": "Dow", "industry": "Polymers", "count": "15,440", "file": "dow_demo.html"},
-    {"name": "DuPont", "industry": "Specialties", "count": "12,982", "file": "dupont_demo.html"},
-    {"name": "Evonik", "industry": "Specialties", "count": "9,451", "file": "evonik_demo.html"},
-    {"name": "Arkema", "industry": "Advanced Materials", "count": "7,112", "file": "arkema_demo.html"},
-    {"name": "Avery Dennison", "industry": "Labels", "count": "5,890", "file": "avery_dennison_demo.html"},
-    {"name": "Covestro", "industry": "Polyurethanes", "count": "8,231", "file": "covestro_demo.html"},
-    {"name": "PPG", "industry": "Coatings", "count": "14,556", "file": "ppg_demo.html"},
-    {"name": "Syensqo", "industry": "Specialty Polymers", "count": "11,023", "file": "syensqo_demo.html"},
-    {"name": "AkzoNobel", "industry": "Performance Coatings", "count": "13,445", "file": "akzonobel_demo.html"},
-    {"name": "Clariant", "industry": "Care Chemicals", "count": "6,778", "file": "clariant_demo.html"},
-    {"name": "Henkel", "industry": "Adhesives", "count": "24,593", "file": "henkel_lab_demo.html"},
+    {"name": "3M", "industry": "Materials", "count": "24,593", "file": "examples/branded-demos/3m_demo.html"},
+    {"name": "BASF", "industry": "Chemicals", "count": "18,201", "file": "examples/branded-demos/basf_demo.html"},
+    {"name": "Dow", "industry": "Polymers", "count": "15,440", "file": "examples/branded-demos/dow_demo.html"},
+    {"name": "DuPont", "industry": "Specialties", "count": "12,982", "file": "examples/branded-demos/dupont_demo.html"},
+    {"name": "Evonik", "industry": "Specialties", "count": "9,451", "file": "examples/branded-demos/evonik_demo.html"},
+    {"name": "Arkema", "industry": "Advanced Materials", "count": "7,112", "file": "examples/branded-demos/arkema_demo.html"},
+    {"name": "Avery Dennison", "industry": "Labels", "count": "5,890", "file": "examples/branded-demos/avery_dennison_demo.html"},
+    {"name": "Covestro", "industry": "Polyurethanes", "count": "8,231", "file": "examples/branded-demos/covestro_demo.html"},
+    {"name": "PPG", "industry": "Coatings", "count": "14,556", "file": "examples/branded-demos/ppg_demo.html"},
+    {"name": "Syensqo", "industry": "Specialty Polymers", "count": "11,023", "file": "examples/branded-demos/syensqo_demo.html"},
+    {"name": "AkzoNobel", "industry": "Performance Coatings", "count": "13,445", "file": "examples/branded-demos/akzonobel_demo.html"},
+    {"name": "Clariant", "industry": "Care Chemicals", "count": "6,778", "file": "examples/branded-demos/clariant_demo.html"},
+    {"name": "Henkel", "industry": "Adhesives", "count": "24,593", "file": "examples/branded-demos/henkel_lab_demo.html"},
 ]
 
 v = "2.6.5"

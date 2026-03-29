@@ -1,8 +1,13 @@
 # DreaMS Atlas API Reference
 
-**Base URL:** `https://dreams-atlas.onrender.com`  
-**Version:** 1.0  
+**Base URL:** `https://dreams-atlas.onrender.com`
+**Version:** 1.1
 **Protocol:** REST / JSON
+
+## API Versioning
+
+The API uses URL-based versioning. All current endpoints are unversioned (`/api/*`).
+Future breaking changes will be introduced under `/api/v2/*`. The unversioned paths will remain as aliases to the latest stable version.
 
 ---
 
@@ -127,8 +132,9 @@ curl "https://dreams-atlas.onrender.com/api/search?id=ADHESIVE_0042&k=20"
 | 503 | `Search data not loaded` | Backend initialization incomplete; try again in 10s |
 
 **Rate Limiting:**
-- **Limit:** 30 requests per minute per IP
-- **Headers:** None (silent drop after limit; use 429 to detect)
+- **Limit:** 60 requests per minute per IP (sliding window)
+- **Response:** 429 status code when exceeded
+- **Headers (planned):** `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `Retry-After`
 
 **Caching:**
 - Results are cached (LRU, 512 entries)
@@ -216,6 +222,150 @@ curl -X POST https://dreams-atlas.onrender.com/api/track \
     }
   }'
 ```
+
+---
+
+### **6. Export**
+
+#### `GET /api/export`
+
+Export a list of compound IDs as a CSV file.
+
+**Request:**
+```bash
+curl "https://dreams-atlas.onrender.com/api/export?ids=ADHESIVE_0001,ADHESIVE_0042,ADHESIVE_0099"
+```
+
+**Query Parameters:**
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| `ids` | string | Yes | Comma-separated list of spectrum IDs |
+
+**Response (200 OK):** CSV file download with `Content-Disposition: attachment; filename=export.csv`
+
+```csv
+id,rank
+ADHESIVE_0001,0
+ADHESIVE_0042,1
+ADHESIVE_0099,2
+```
+
+**Rate Limited:** Yes (same limits as search).
+
+---
+
+### **7. Cluster List**
+
+#### `GET /api/cluster/list`
+
+Return all clusters with their sizes. Clusters are computed at startup from the embedding space.
+
+**Request:**
+```bash
+curl https://dreams-atlas.onrender.com/api/cluster/list
+```
+
+**Response (200 OK):**
+```json
+{
+  "clusters": [
+    {"cluster_id": 0, "size": 1250},
+    {"cluster_id": 1, "size": 980},
+    {"cluster_id": 2, "size": 1100}
+  ]
+}
+```
+
+**Error Responses:**
+| Code | Message | Meaning |
+|------|---------|---------|
+| 503 | `Cluster data not available` | Startup incomplete or no cluster labels in data |
+
+---
+
+### **8. Cluster Insights**
+
+#### `GET /api/cluster/insights`
+
+Detailed analysis for a single cluster including density, similarity stats, and representative spectra.
+
+**Request:**
+```bash
+curl "https://dreams-atlas.onrender.com/api/cluster/insights?cluster_id=0"
+```
+
+**Query Parameters:**
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| `cluster_id` | integer | Yes | Cluster ID from `/api/cluster/list` |
+
+**Response (200 OK):**
+```json
+{
+  "cluster_id": 0,
+  "size": 1250,
+  "centroid_density": 0.8732,
+  "intra_cluster_similarity_mean": 0.9145,
+  "intra_cluster_similarity_p10": 0.8201,
+  "nearest_cluster": 3,
+  "nearest_cluster_distance": 0.4521,
+  "top_representative_ids": ["ADHESIVE_0042", "ADHESIVE_0018", "ADHESIVE_0099"]
+}
+```
+
+**Error Responses:**
+| Code | Message | Meaning |
+|------|---------|---------|
+| 404 | `Cluster {id} not found` | Invalid cluster ID |
+| 503 | `Cluster data not available` | Startup incomplete |
+
+---
+
+### **9. Logs**
+
+#### `GET /api/logs`
+
+Return the last 100 log entries from the in-memory event log.
+
+**Request:**
+```bash
+curl https://dreams-atlas.onrender.com/api/logs
+```
+
+**Response (200 OK):**
+```json
+[
+  {
+    "time": "2026-03-28 12:00:00",
+    "level": "INFO",
+    "message": "SEARCH [Tenant: default] | ID: ADHESIVE_0042 | k: 20"
+  }
+]
+```
+
+---
+
+### **10. Roadmap Endpoints (Coming Soon)**
+
+The following endpoints are stubbed and return `{"status": "coming_soon", "feature": "...", "eta": "Q3 2026"}`:
+
+| Endpoint | Method | Feature |
+|----------|--------|---------|
+| `/api/eln/context` | GET | ELN Context Injection |
+| `/api/eln/export` | GET | ELN Export (Benchling) |
+| `/api/lims/ingest` | GET | LIMS SMILES-to-Spectrum Ingestion |
+| `/api/dotmatics/sync` | POST | Dotmatics Sync Integration |
+| `/api/molecule/smiles` | GET | Molecule SMILES Lookup |
+| `/api/molecule/properties` | GET | Real-World Molecule Property Mapping |
+| `/api/safety/score` | GET | Predictive ADMET & Safety Scoring |
+| `/api/safety/sds` | GET | Safety Data Sheet Generation |
+| `/api/hts/assay` | GET | High-Throughput Screening Assay Data |
+| `/api/hts/sar` | GET | Structure-Activity Relationship Map |
+| `/api/sustainability/score` | GET | Green Chemistry Score |
+| `/api/ip/check` | GET | IP & Freedom-to-Operate Check |
+| `/api/collaboration/sign` | POST | Collaborative E-Signature |
+| `/api/validation/similarity` | GET | DreaMS vs. Experimental Similarity Validation |
+| `/api/onboard/upload` | POST | Customer Onboarding (.mgf Upload) |
 
 ---
 
@@ -371,7 +521,7 @@ function displayNeighbors(results) {
 
 | Limit | Value | Notes |
 |-------|-------|-------|
-| **Requests per minute** | 30 | Per IP; sliding window |
+| **Requests per minute** | 60 | Per IP; sliding window |
 | **Max k value** | 100 | Auto-clamped if exceeded |
 | **Max ID length** | 128 chars | Alphanumeric + dash/underscore/dot/colon |
 | **Cache size** | 512 entries | LRU eviction |
@@ -410,6 +560,7 @@ const results = await client.search("ADHESIVE_0042", { k: 20 });
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.1 | 2026-03-28 | Added export, cluster list/insights, logs endpoints. Documented roadmap stubs. Updated rate limit to 60 req/min. |
 | 1.0 | 2026-02-12 | Initial API release |
 
 ---
@@ -423,4 +574,4 @@ const results = await client.search("ADHESIVE_0042", { k: 20 });
 
 ---
 
-**Last updated:** 2026-02-12 12:25 AM MST
+**Last updated:** 2026-03-28
