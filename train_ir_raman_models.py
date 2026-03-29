@@ -20,7 +20,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 # --- Config ---
-DATA_FILE = "adhesive_spectra_ir_raman_955.csv"
+DATA_FILE = "adhesive_spectra_ir_raman_intensities.csv"
 OUTPUT_DIR = Path("model_output")
 OUTPUT_DIR.mkdir(exist_ok=True)
 N_FOLDS = 5
@@ -31,11 +31,11 @@ df = pd.read_csv(DATA_FILE)
 print(f"Dataset: {len(df)} samples, {df['adhesive_class'].nunique()} classes, {df['compound_name'].nunique()} compounds")
 
 # --- Feature engineering ---
-NUMERIC_FEATURES = ['Q_SNR', 'Q_res', 'Q_base', 'Q_peak', 'Q_total']
-CATEGORICAL_FEATURES = ['spectral_type', 'instrument', 'baseline_correction_method',
-                        'source_database', 'qc_disposition', 'wavenumber_range']
+# Use spectral intensity columns (wn_400 through wn_4000)
+INTENSITY_COLS = [c for c in df.columns if c.startswith('wn_')]
+print(f"Spectral features: {len(INTENSITY_COLS)} wavenumber bins ({INTENSITY_COLS[0]} to {INTENSITY_COLS[-1]})")
 
-X = df[NUMERIC_FEATURES + CATEGORICAL_FEATURES].copy()
+X = df[INTENSITY_COLS].copy()
 y_labels = df['adhesive_class'].values
 groups = df['compound_name'].values
 
@@ -48,10 +48,7 @@ print(f"Classes: {list(class_names)}")
 print(f"Class distribution: {dict(zip(class_names, np.bincount(y)))}")
 
 # --- Preprocessing pipeline ---
-preprocessor = ColumnTransformer([
-    ('num', StandardScaler(), NUMERIC_FEATURES),
-    ('cat', OneHotEncoder(handle_unknown='ignore', sparse_output=False), CATEGORICAL_FEATURES)
-])
+preprocessor = StandardScaler()
 
 # ============================================================
 # MODEL 1: RandomForest (Primary Production Candidate)
@@ -61,7 +58,7 @@ print("RANDOMFOREST — Compound-Grouped 5-Fold CV")
 print("="*60)
 
 rf_pipeline = Pipeline([
-    ('preprocess', preprocessor),
+    ('scaler', StandardScaler()),
     ('clf', RandomForestClassifier(
         n_estimators=500,
         max_depth=None,
@@ -140,10 +137,7 @@ for i, row in enumerate(rf_cm):
 
 # Feature importance
 rf_pipeline.fit(X, y)  # Retrain on full data for production model
-feature_names = (NUMERIC_FEATURES +
-    list(rf_pipeline.named_steps['preprocess']
-         .named_transformers_['cat']
-         .get_feature_names_out(CATEGORICAL_FEATURES)))
+feature_names = INTENSITY_COLS
 importances = rf_pipeline.named_steps['clf'].feature_importances_
 feat_imp = sorted(zip(feature_names, importances), key=lambda x: -x[1])
 print(f"\n  Top 10 Features (RF):")
@@ -166,8 +160,8 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 
-# Preprocess all data once
-X_processed = preprocessor.fit_transform(X)
+# Preprocess all data once — scale intensity features
+X_processed = preprocessor.fit_transform(X.values)
 n_features = X_processed.shape[1]
 print(f"  Input features: {n_features}")
 
@@ -176,18 +170,23 @@ class CNN1D(nn.Module):
         super().__init__()
         self.net = nn.Sequential(
             nn.Unflatten(1, (1, n_features)),
-            nn.Conv1d(1, 32, kernel_size=3, padding=1),
-            nn.BatchNorm1d(32),
-            nn.ReLU(),
-            nn.Conv1d(32, 64, kernel_size=3, padding=1),
+            nn.Conv1d(1, 64, kernel_size=7, padding=3),
             nn.BatchNorm1d(64),
+            nn.ReLU(),
+            nn.MaxPool1d(2),
+            nn.Conv1d(64, 128, kernel_size=5, padding=2),
+            nn.BatchNorm1d(128),
+            nn.ReLU(),
+            nn.MaxPool1d(2),
+            nn.Conv1d(128, 128, kernel_size=3, padding=1),
+            nn.BatchNorm1d(128),
             nn.ReLU(),
             nn.AdaptiveAvgPool1d(1),
             nn.Flatten(),
-            nn.Linear(64, 32),
+            nn.Linear(128, 64),
             nn.ReLU(),
-            nn.Dropout(0.3),
-            nn.Linear(32, n_classes)
+            nn.Dropout(0.4),
+            nn.Linear(64, n_classes)
         )
 
     def forward(self, x):
@@ -213,15 +212,15 @@ for fold, (train_idx, test_idx) in enumerate(gkf.split(X, y, groups)):
     class_weights = class_weights / class_weights.sum() * n_classes
 
     model = CNN1D(n_features, n_classes).to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-4)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=5e-4, weight_decay=1e-3)
     criterion = nn.CrossEntropyLoss(weight=class_weights)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=300)
 
     train_ds = TensorDataset(X_train_t, y_train_t)
-    train_dl = DataLoader(train_ds, batch_size=64, shuffle=True)
+    train_dl = DataLoader(train_ds, batch_size=32, shuffle=True)
 
     model.train()
-    for epoch in range(100):
+    for epoch in range(300):
         for xb, yb in train_dl:
             optimizer.zero_grad()
             loss = criterion(model(xb), yb)
